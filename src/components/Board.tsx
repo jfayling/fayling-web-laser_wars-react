@@ -15,6 +15,7 @@ export const Board: React.FC<BoardProps> = ({ gameState, onCellClick }) => {
                 className="grid gap-1 relative z-0"
                 style={{
                     gridTemplateColumns: `repeat(10, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(10, minmax(0, 1fr))`,
                     width: 'min(80vw, 600px)',
                     aspectRatio: '1/1',
                 }}

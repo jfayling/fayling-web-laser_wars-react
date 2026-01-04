@@ -1,16 +1,27 @@
-import React from 'react';
-import { Users, Monitor, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Monitor, Zap, HelpCircle } from 'lucide-react';
+import { HowToPlayModal } from './HowToPlayModal';
 
 interface StartScreenProps {
     onSelectMode: (mode: 'PVP' | 'PVE') => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode }) => {
+    const [showHowToPlay, setShowHowToPlay] = useState(false);
+
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-950/90 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-8 p-12 bg-gray-900 border border-gray-800 rounded-3xl shadow-[0_0_50px_rgba(59,130,246,0.2)]">
+            <div className="flex flex-col items-center gap-8 p-12 bg-gray-900 border border-gray-800 rounded-3xl shadow-[0_0_50px_rgba(59,130,246,0.2)] relative">
 
-                <div className="text-center mb-4">
+                <button
+                    onClick={() => setShowHowToPlay(true)}
+                    className="absolute top-6 right-6 text-gray-400 hover:text-cyan-400 transition-colors flex items-center gap-2 text-sm font-semibold uppercase tracking-wider"
+                >
+                    <HelpCircle size={20} />
+                    How to Play
+                </button>
+
+                <div className="text-center mb-4 mt-8">
                     <h1 className="text-6xl font-bold mb-4 flex items-center justify-center gap-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
                         <Zap size={64} className="text-yellow-400 fill-yellow-400" />
                         LASER WARS
@@ -39,6 +50,11 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode }) => {
                     </button>
                 </div>
             </div>
+
+            <HowToPlayModal
+                isOpen={showHowToPlay}
+                onClose={() => setShowHowToPlay(false)}
+            />
         </div>
     );
 };
