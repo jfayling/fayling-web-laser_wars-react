@@ -8,7 +8,7 @@ export const MusicControls: React.FC = () => {
     const { musicVolume, musicEnabled } = useSettings();
 
     useEffect(() => {
-        audioRef.current = new Audio('/music/laserwars_1.mp3');
+        audioRef.current = new Audio(`${import.meta.env.BASE_URL}music/laserwars_1.mp3`);
         audioRef.current.loop = true;
 
         return () => {
@@ -93,8 +93,8 @@ export const MusicControls: React.FC = () => {
         <button
             onClick={toggleMusic}
             className={`fixed top-4 right-4 z-50 p-3 rounded-full transition-all backdrop-blur-sm ${!musicEnabled
-                    ? 'bg-gray-800/50 border border-gray-700 text-gray-600 cursor-not-allowed'
-                    : 'bg-gray-900/80 border border-gray-700 text-cyan-400 hover:bg-gray-800 hover:text-cyan-300 hover:border-cyan-500 shadow-[0_0_10px_rgba(34,211,238,0.2)]'
+                ? 'bg-gray-800/50 border border-gray-700 text-gray-600 cursor-not-allowed'
+                : 'bg-gray-900/80 border border-gray-700 text-cyan-400 hover:bg-gray-800 hover:text-cyan-300 hover:border-cyan-500 shadow-[0_0_10px_rgba(34,211,238,0.2)]'
                 }`}
             title={!musicEnabled ? "Music Disabled in Settings" : (isPlaying ? "Mute Music" : "Play Music")}
             disabled={!musicEnabled}
