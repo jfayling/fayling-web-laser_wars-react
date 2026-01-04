@@ -52,7 +52,7 @@ export const useGameState = (
 
     const [selectedTool, setSelectedTool] = useState<ToolType>('MIRROR');
 
-    const calculateValidMoves = (grid: Cell[][], x: number, y: number, player: Player): { x: number, y: number }[] => {
+    const calculateValidMoves = (grid: Cell[][], x: number, y: number): { x: number, y: number }[] => {
         const moves: { x: number, y: number }[] = [];
         const directions = [
             { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
@@ -89,36 +89,14 @@ export const useGameState = (
                 if (prev.moveStartPos) {
                     // Check if clicked cell is a valid move
                     const isValidMove = prev.validMoves?.some(m => m.x === x && m.y === y);
-                    if (isValidMove) {
-                        // Execute Move
-                        const newGrid = prev.grid.map(row => row.map(c => ({ ...c })));
-                        const oldPos = prev.moveStartPos;
-                        const newPos = { x, y };
-
-                        // Clear old pos
-                        // Assuming Source was at oldPos. We need to find the Source for current player to be sure?
-                        // Actually, better to just move the content from oldPos to newPos.
-                        // But wait, if we are mid-move, the Source is STILL at old Pos visually?
-                        // Or did we already move it?
-                        // Use case:
-                        // 1. Click Source with Move tool. -> Highlight moves. (Source still there)
-                        // 2. Click target. -> Move Source to target.
-                        //    - Set activeCell = target (so we can lock or undo).
-                        //    - Set moveStartPos = oldPos.
-
-                        // Wait, my logic below in "handleCellClick" was based on tool selection.
-
-                        // Let's refine the flow in the main block.
-                    } else {
-                        // Clicked invalid move while moving?
-                        // Maybe just return?
+                    if (!isValidMove) {
                         return prev;
                     }
+                    // Proceed to main logic
                 } else {
                     return prev;
                 }
             }
-
             const newGrid = prev.grid.map(row => row.map(cell => ({ ...cell })));
             const cell = newGrid[y][x];
 
@@ -126,8 +104,7 @@ export const useGameState = (
             let nextTurn = prev.turn;
             let newActiveCell = prev.activeCell;
             let newValidMoves: { x: number, y: number }[] | undefined = undefined;
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            let newMoveStartPos = prev.moveStartPos;
+
 
             // If we are modifying a cell (creating a new active cell or editing existing active)
             const isModifyingActive = prev.activeCell && prev.activeCell.x === x && prev.activeCell.y === y;
@@ -137,7 +114,7 @@ export const useGameState = (
             if (currentTool === 'MOVE') {
                 if (!prev.moveStartPos) {
                     if (cell.content === 'SOURCE' && cell.owner === prev.turn) {
-                        newValidMoves = calculateValidMoves(newGrid, x, y, prev.turn);
+                        newValidMoves = calculateValidMoves(newGrid, x, y);
                         return {
                             ...prev,
                             validMoves: newValidMoves,
@@ -363,7 +340,7 @@ export const useGameState = (
             }
 
             if (sourceX !== -1) {
-                const moves = calculateValidMoves(gameState.grid, sourceX, sourceY, gameState.turn);
+                const moves = calculateValidMoves(gameState.grid, sourceX, sourceY);
                 setGameState(prev => ({
                     ...prev,
                     moveStartPos: { x: sourceX, y: sourceY },
