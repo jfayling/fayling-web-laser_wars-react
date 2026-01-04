@@ -1,4 +1,4 @@
-import type { Cell, Player, ToolType } from '../types';
+import type { Cell, Player, ToolType, Direction } from '../types';
 import { calculateLaserPath } from './laserLogic';
 import AI_CONFIG from './aiConfig.json';
 
@@ -112,6 +112,8 @@ const generateMoves = (state: AIState): AiMove[] => {
             if (cell.content === 'SOURCE' && cell.owner === currentTurn) {
                 sourceX = x;
                 sourceY = y;
+                validMoves.push({ x, y, tool: 'ROTATE_LEFT' });
+                validMoves.push({ x, y, tool: 'ROTATE_RIGHT' });
             }
 
             if (cell.content === 'EMPTY') {
@@ -190,6 +192,17 @@ const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
             grid: nextGrid,
             currentTurn: opponent
         };
+    } else if (move.tool === 'ROTATE_LEFT' || move.tool === 'ROTATE_RIGHT') {
+        const cell = nextGrid[move.y][move.x];
+        const dirs: Direction[] = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
+        const currentIdx = dirs.indexOf(cell.orientation || (player === 'BLUE' ? 'RIGHT' : 'LEFT'));
+        let newIdx;
+        if (move.tool === 'ROTATE_RIGHT') {
+            newIdx = (currentIdx + 1) % 4;
+        } else {
+            newIdx = (currentIdx - 1 + 4) % 4;
+        }
+        cell.orientation = dirs[newIdx];
     } else if (move.tool === 'MOVE') {
         let sX = -1, sY = -1;
         for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {

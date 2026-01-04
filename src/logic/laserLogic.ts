@@ -28,6 +28,9 @@ export const calculateLaserPath = (grid: Cell[][], firingPlayer: Player): LaserP
             if (cell.content === 'SOURCE' && cell.owner === firingPlayer) {
                 startX = x;
                 startY = y;
+                if (cell.orientation) {
+                    direction = cell.orientation;
+                }
                 break;
             }
         }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Square, Bomb as BombIcon, Eraser, ShieldOff, Move } from 'lucide-react';
+import { Sparkles, Square, Bomb as BombIcon, Eraser, ShieldOff, Move, RotateCcw, RotateCw } from 'lucide-react';
 import type { ToolType, Player } from '../types';
 import clsx from 'clsx';
 
@@ -9,9 +9,10 @@ interface ToolbarProps {
     turn: Player;
     isLocked?: boolean;
     hasOpponentBombs?: boolean;
+    disabledTools?: ToolType[];
 }
 
-export const Toolbar: React.FC<ToolbarProps> = ({ selectedTool, onSelectTool, turn, isLocked = false, hasOpponentBombs = false }) => {
+export const Toolbar: React.FC<ToolbarProps> = ({ selectedTool, onSelectTool, turn, isLocked = false, hasOpponentBombs = false, disabledTools = [] }) => {
     const isRed = turn === 'RED';
 
     // Theme colors
@@ -21,7 +22,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ selectedTool, onSelectTool, tu
 
     const ToolButton = ({ tool, icon: Icon, label, isDisabledOverride }: { tool: ToolType, icon: any, label: string, isDisabledOverride?: boolean }) => {
         const isActive = selectedTool === tool;
-        const isDisabled = isLocked && !isActive || isDisabledOverride;
+        const isDisabled = (isLocked && !isActive) || isDisabledOverride || disabledTools.includes(tool);
 
         return (
             <button
@@ -46,6 +47,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({ selectedTool, onSelectTool, tu
             <ToolButton tool="ERASER" icon={Eraser} label="Eraser" />
             <ToolButton tool="DEFUSE" icon={ShieldOff} label="Defuse" isDisabledOverride={!hasOpponentBombs} />
             <ToolButton tool="MOVE" icon={Move} label="Move" />
+            <ToolButton tool="ROTATE_LEFT" icon={RotateCcw} label="Rotate L" />
+            <ToolButton tool="ROTATE_RIGHT" icon={RotateCw} label="Rotate R" />
         </div>
     );
 };

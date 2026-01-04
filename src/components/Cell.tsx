@@ -46,7 +46,23 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove }) => {
                 </div>
             )}
             {cell.content === 'SOURCE' && (
-                <Circle size={24} className={clsx("fill-current", isRed ? "text-red-500" : "text-blue-500")} />
+                <div className="relative flex items-center justify-center">
+                    <Circle size={24} className={clsx("fill-current", isRed ? "text-red-500" : "text-blue-500")} />
+                    {/* Direction Indicator */}
+                    <div
+                        className={clsx(
+                            "absolute w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px]",
+                            isRed ? "border-b-white" : "border-b-white", // White arrow on top of colored circle
+                            "transform origin-center transition-transform duration-300"
+                        )}
+                        style={{
+                            transform: `rotate(${cell.orientation === 'RIGHT' ? 90 :
+                                    cell.orientation === 'DOWN' ? 180 :
+                                        cell.orientation === 'LEFT' ? 270 : 0
+                                }deg) translateY(-2px)` // Offset to point out
+                        }}
+                    />
+                </div>
             )}
         </div>
     );

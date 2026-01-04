@@ -83,6 +83,12 @@ Once the move is set, the player clicks **"FIRE LASER"**.
   - Removes the target bomb.
   - Ends the turn immediately (skips firing).
 
+### Rotate Action
+- **Function**: Rotate your **Source** 90 degrees Left or Right.
+- **Rules**:
+  - Counts as your turn's action (cannot place pieces or move).
+  - Changes the firing direction of the laser.
+
 ### Move Action
 - **Function**: Move your **Source** to an adjacent, non-blocked square (Horizontal, Vertical, Diagonal).
 - **Execution**: 
@@ -97,5 +103,5 @@ Once the move is set, the player clicks **"FIRE LASER"**.
 
 ## 5. Controls
 - **Click**: Place or interact with a cell.
-- **Toolbar**: Select piece type (Mirror, Wall, Bomb, Eraser, Defuse).
+- **Toolbar**: Select piece type (Mirror, Wall, Bomb, Eraser, Defuse, Rotate Left, Rotate Right).
 - **Fire Button**: Ends turn and fires laser.

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { GameState, Cell, Player, CellContent, ToolType } from '../types';
+import type { GameState, Cell, Player, CellContent, ToolType, Direction } from '../types';
 import { calculateLaserPath } from '../logic/laserLogic';
 
 const BOARD_SIZE = 10;
@@ -30,12 +30,20 @@ const createInitialGrid = (): Cell[][] => {
                 owner = 'RED';
             }
 
-            row.push({ x, y, content, owner });
+            row.push({
+                x,
+                y,
+                content,
+                owner,
+                orientation: (content === 'SOURCE' && owner === 'BLUE') ? 'RIGHT' :
+                    (content === 'SOURCE' && owner === 'RED') ? 'LEFT' : undefined
+            });
         }
         grid.push(row);
     }
     return grid;
 };
+
 
 export const useGameState = (
     playExplosionSound?: () => void,
@@ -47,10 +55,15 @@ export const useGameState = (
         isFiring: false,
         winner: null,
         laserPath: [],
-        activeCell: null
+        activeCell: null,
+        originalOrientation: null
     });
 
     const [selectedTool, setSelectedTool] = useState<ToolType>('MIRROR');
+
+    // ... (keeping calculateValidMoves)
+
+
 
     const calculateValidMoves = (grid: Cell[][], x: number, y: number): { x: number, y: number }[] => {
         const moves: { x: number, y: number }[] = [];
@@ -139,9 +152,11 @@ export const useGameState = (
 
                         targetCell.content = sourceCell.content;
                         targetCell.owner = sourceCell.owner;
+                        targetCell.orientation = sourceCell.orientation; // Preserve orientation
 
                         sourceCell.content = 'EMPTY';
                         sourceCell.owner = null;
+                        sourceCell.orientation = undefined; // Clear orientation from original cell
 
                         newActiveCell = { x, y };
                         newValidMoves = [prev.moveStartPos];
@@ -165,7 +180,8 @@ export const useGameState = (
 
             // Check ownership and modify
             if (cell.owner !== null && cell.owner !== prev.turn && currentTool !== 'DEFUSE') return prev;
-            if (cell.content === 'SOURCE' || cell.content === 'BLOCK') return prev;
+            if (cell.content === 'BLOCK') return prev;
+            if (cell.content === 'SOURCE' && currentTool !== 'ROTATE_LEFT' && currentTool !== 'ROTATE_RIGHT') return prev;
 
             if (currentTool === 'MIRROR') {
                 if (cell.content === 'EMPTY') {
@@ -221,6 +237,48 @@ export const useGameState = (
                     cell.owner = null;
                     nextTurn = prev.turn === 'BLUE' ? 'RED' : 'BLUE';
                     newActiveCell = null;
+                }
+            } else if (currentTool === 'ROTATE_LEFT' || currentTool === 'ROTATE_RIGHT') {
+                // Must be own Source
+                if (cell.content === 'SOURCE' && cell.owner === prev.turn) {
+                    // Determine Original Orientation
+                    let originalOrientation = prev.originalOrientation;
+                    if (!prev.activeCell) {
+                        // Start of rotation sequence
+                        originalOrientation = cell.orientation;
+                    }
+
+                    // Define order: UP -> RIGHT -> DOWN -> LEFT -> UP
+                    const dirs: Direction[] = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
+                    const currentIdx = dirs.indexOf(cell.orientation || (prev.turn === 'BLUE' ? 'RIGHT' : 'LEFT'));
+
+                    let newIdx;
+                    if (currentTool === 'ROTATE_RIGHT') {
+                        newIdx = (currentIdx + 1) % 4;
+                    } else {
+                        // Rotate Left
+                        newIdx = (currentIdx - 1 + 4) % 4;
+                    }
+
+                    const newOrientation = dirs[newIdx];
+                    cell.orientation = newOrientation;
+
+                    // Check Undo Condition
+                    // If we returned to original orientation, we clear the active move
+                    if (originalOrientation && newOrientation === originalOrientation) {
+                        newActiveCell = null;
+                        originalOrientation = null; // Reset
+                    } else {
+                        // Locked in rotation
+                        newActiveCell = { x, y };
+                    }
+
+                    return {
+                        ...prev,
+                        grid: newGrid,
+                        activeCell: newActiveCell,
+                        originalOrientation
+                    };
                 }
             }
 
@@ -308,6 +366,9 @@ export const useGameState = (
             setGameState(current => {
                 if (current.winner) return current;
 
+                // Reset tool to MIRROR at the start of new turn
+                setSelectedTool('MIRROR');
+
                 return {
                     ...current,
                     isFiring: false,
@@ -315,7 +376,8 @@ export const useGameState = (
                     laserPath: [],
                     activeCell: null,
                     validMoves: undefined,
-                    moveStartPos: null
+                    moveStartPos: null,
+                    originalOrientation: null // Reset rotation intent
                 };
             });
         }, 2000);

@@ -8,6 +8,7 @@ export interface Cell {
     y: number;
     content: CellContent;
     owner: Player | null; // Who placed it seems relevant for mirrors
+    orientation?: Direction; // For SOURCE pieces
 }
 
 export interface Point {
@@ -24,6 +25,7 @@ export interface GameState {
     activeCell: Point | null;
     validMoves?: Point[];
     moveStartPos?: Point | null;
+    originalOrientation?: Direction | null;
 }
 
-export type ToolType = 'MIRROR' | 'WALL' | 'BOMB' | 'ERASER' | 'DEFUSE' | 'MOVE';
+export type ToolType = 'MIRROR' | 'WALL' | 'BOMB' | 'ERASER' | 'DEFUSE' | 'MOVE' | 'ROTATE_LEFT' | 'ROTATE_RIGHT';

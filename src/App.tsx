@@ -108,6 +108,66 @@ function App() {
     return <StartScreen onSelectMode={setGameMode} />;
   }
 
+  /* New handler for tool selection */
+  const handleToolSelect = (tool: import('./types').ToolType) => {
+    setSelectedTool(tool);
+
+    // Auto-apply rotation if a Rotate tool is clicked
+    if (tool === 'ROTATE_LEFT' || tool === 'ROTATE_RIGHT') {
+      let sourceX = -1;
+      let sourceY = -1;
+      for (let y = 0; y < gameState.grid.length; y++) {
+        for (let x = 0; x < gameState.grid[0].length; x++) {
+          if (gameState.grid[y][x].content === 'SOURCE' && gameState.grid[y][x].owner === gameState.turn) {
+            sourceX = x;
+            sourceY = y;
+            break;
+          }
+        }
+      }
+      if (sourceX !== -1) {
+        handleCellClick(sourceX, sourceY, tool);
+        playRotateSound();
+      }
+    }
+  };
+
+  // Calculate disabled tools based on rotation state
+  const disabledTools: import('./types').ToolType[] = [];
+  const isRotationActive = !!gameState.originalOrientation;
+
+  if (isRotationActive) {
+    // Disable all non-rotate tools
+    disabledTools.push('MIRROR', 'WALL', 'BOMB', 'ERASER', 'DEFUSE', 'MOVE');
+
+    // We are in a dirty rotation state
+    let sourceCell = null;
+    for (const row of gameState.grid) {
+      for (const cell of row) {
+        if (cell.content === 'SOURCE' && cell.owner === gameState.turn) {
+          sourceCell = cell;
+          break;
+        }
+      }
+      if (sourceCell) break;
+    }
+
+    if (sourceCell && sourceCell.orientation) {
+      const dirs: import('./types').Direction[] = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
+      const origIdx = dirs.indexOf(gameState.originalOrientation!); // Non-null asserted because of check above
+      const currIdx = dirs.indexOf(sourceCell.orientation);
+      const diff = (currIdx - origIdx + 4) % 4;
+
+      if (diff === 1) {
+        // Rotated Right (1 step). Disable further Right.
+        disabledTools.push('ROTATE_RIGHT');
+      } else if (diff === 3) {
+        // Rotated Left (-1 step). Disable further Left.
+        disabledTools.push('ROTATE_LEFT');
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4">
       {/* Settings Button */}
@@ -142,10 +202,11 @@ function App() {
           {gameState.turn === 'BLUE' && (
             <Toolbar
               selectedTool={selectedTool}
-              onSelectTool={setSelectedTool}
+              onSelectTool={handleToolSelect}
               turn="BLUE"
-              isLocked={!!gameState.activeCell}
+              isLocked={!!gameState.activeCell && !isRotationActive}
               hasOpponentBombs={gameState.grid.some(row => row.some(cell => cell.content === 'BOMB' && cell.owner === 'RED'))}
+              disabledTools={disabledTools}
             />
           )}
         </div>
@@ -165,10 +226,11 @@ function App() {
           {gameState.turn === 'RED' && gameMode === 'PVP' && (
             <Toolbar
               selectedTool={selectedTool}
-              onSelectTool={setSelectedTool}
+              onSelectTool={handleToolSelect}
               turn="RED"
-              isLocked={!!gameState.activeCell}
+              isLocked={!!gameState.activeCell && !isRotationActive}
               hasOpponentBombs={gameState.grid.some(row => row.some(cell => cell.content === 'BOMB' && cell.owner === 'BLUE'))}
+              disabledTools={disabledTools}
             />
           )}
         </div>

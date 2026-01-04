@@ -19,6 +19,7 @@ The AI generates all legal moves for the current board state:
 *   **Place Bomb**: In empty cells.
 *   **Rotate Mirror**: For owned mirrors.
 *   **Defuse Bomb**: For opponent bombs.
+*   **Rotate Source**: 90 degrees Left or Right.
 *   **Move Source**: To adjacent empty cells.
 
 Moves are sorted by heuristic priority (e.g., Defuse > Mirror > Bomb > Move) to optimize Alpha-Beta pruning performance.
