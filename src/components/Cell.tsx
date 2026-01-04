@@ -50,18 +50,19 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove }) => {
                     <Circle size={24} className={clsx("fill-current", isRed ? "text-red-500" : "text-blue-500")} />
                     {/* Direction Indicator */}
                     <div
-                        className={clsx(
-                            "absolute w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px]",
-                            isRed ? "border-b-white" : "border-b-white", // White arrow on top of colored circle
-                            "transform origin-center transition-transform duration-300"
-                        )}
+                        className="absolute flex items-center justify-center transition-transform duration-300"
                         style={{
                             transform: `rotate(${cell.orientation === 'RIGHT' ? 90 :
                                     cell.orientation === 'DOWN' ? 180 :
                                         cell.orientation === 'LEFT' ? 270 : 0
-                                }deg) translateY(-2px)` // Offset to point out
+                                }deg) translateY(-8px)` // Push out from center
                         }}
-                    />
+                    >
+                        {/* SVG Triangle */}
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 0L12 10H0L6 0Z" fill="white" />
+                        </svg>
+                    </div>
                 </div>
             )}
         </div>
