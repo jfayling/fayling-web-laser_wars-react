@@ -9,6 +9,7 @@ import { Zap } from 'lucide-react';
 import { MusicControls } from './components/MusicControls';
 import clsx from 'clsx';
 import { Settings as SettingsIcon } from 'lucide-react';
+import { useSettings } from './contexts/SettingsContext';
 import { SettingsModal } from './components/SettingsModal';
 
 export type GameMode = 'PVP' | 'PVE' | null;
@@ -18,13 +19,14 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { playPlaceSound, playRotateSound, playFireSound, playWinSound, playExplosionSound, playWallHitSound } = useSound();
   const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool } = useGameState(playExplosionSound, playWallHitSound);
+  const { aiDifficulty } = useSettings();
 
   // AI Logic
   useEffect(() => {
     if (gameMode === 'PVE' && gameState.turn === 'RED' && !gameState.winner && !gameState.isFiring) {
       // AI Turn (Red)
       const timeout = setTimeout(() => {
-        const move = calculateAiMove(gameState.grid, 'RED');
+        const move = calculateAiMove(gameState.grid, 'RED', aiDifficulty);
         if (move) {
           // Apply Move
           playPlaceSound(); // AI placed something
@@ -64,7 +66,7 @@ function App() {
 
       return () => clearTimeout(timeout);
     }
-  }, [gameMode, gameState.turn, gameState.winner, gameState.isFiring, gameState.grid, playPlaceSound, handleCellClick, playFireSound, fireLaser]);
+  }, [gameMode, gameState.turn, gameState.winner, gameState.isFiring, gameState.grid, playPlaceSound, handleCellClick, playFireSound, fireLaser, aiDifficulty]);
 
 
   // Handle Win/Loss Sounds

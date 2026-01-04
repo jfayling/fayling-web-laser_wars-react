@@ -9,6 +9,8 @@ interface SettingsContextType {
     setSfxEnabled: (enabled: boolean) => void;
     sfxVolume: number;
     setSfxVolume: (volume: number) => void;
+    aiDifficulty: 'Easy' | 'Medium' | 'Hard';
+    setAiDifficulty: (difficulty: 'Easy' | 'Medium' | 'Hard') => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -43,6 +45,12 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return saved ? parseFloat(saved) : 0.6;
     });
 
+    const [aiDifficulty, setAiDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>(() => {
+        const saved = localStorage.getItem('aiDifficulty');
+        if (saved === 'Easy' || saved === 'Medium' || saved === 'Hard') return saved;
+        return 'Medium';
+    });
+
     // Save to local storage
     useEffect(() => {
         localStorage.setItem('musicEnabled', musicEnabled.toString());
@@ -60,6 +68,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         localStorage.setItem('sfxVolume', sfxVolume.toString());
     }, [sfxVolume]);
 
+    useEffect(() => {
+        localStorage.setItem('aiDifficulty', aiDifficulty);
+    }, [aiDifficulty]);
+
     return (
         <SettingsContext.Provider value={{
             musicEnabled,
@@ -69,7 +81,9 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             sfxEnabled,
             setSfxEnabled,
             sfxVolume,
-            setSfxVolume
+            setSfxVolume,
+            aiDifficulty,
+            setAiDifficulty
         }}>
             {children}
         </SettingsContext.Provider>

@@ -1,0 +1,15 @@
+{
+    "scores": {
+        "WIN": 1000000,
+        "LOSS": -1000000,
+        "DRAW": -500,
+        "MATERIAL_MIRROR": 10,
+        "MATERIAL_BOMB": 2,
+        "THREAT_BOMB_NEAR_SOURCE": -900
+    },
+    "depths": {
+        "Easy": 1,
+        "Medium": 2,
+        "Hard": 3
+    }
+}

@@ -1,49 +1,133 @@
 import type { Cell, Player, ToolType } from '../types';
 import { calculateLaserPath } from './laserLogic';
+import AI_CONFIG from './aiConfig.json';
 
-interface AiMove {
+// --- Types ---
+
+export interface AiMove {
     x: number;
     y: number;
     tool: ToolType;
+    score?: number;
 }
 
-export const calculateAiMove = (grid: Cell[][], aiPlayer: Player): AiMove | null => {
-    // 1. Identify valid moves
+interface AIState {
+    grid: Cell[][];
+    currentTurn: Player;
+}
+
+// --- Entry Point ---
+
+export const calculateAiMove = (grid: Cell[][], aiPlayer: Player, difficulty: 'Easy' | 'Medium' | 'Hard' = 'Hard'): AiMove | null => {
+    const maxDepth = AI_CONFIG.depths[difficulty];
+
+    // Construct initial state
+    const rootState: AIState = {
+        grid: cloneGrid(grid),
+        currentTurn: aiPlayer
+    };
+
+    return findBestMoveAlphaBeta(rootState, maxDepth, aiPlayer);
+};
+
+// --- Alpha-Beta Search ---
+
+const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: Player): AiMove | null => {
+    const moves = generateMoves(rootState);
+    if (moves.length === 0) return null;
+
+    let bestMove: AiMove | null = null;
+    let alpha = -Infinity;
+    let beta = Infinity;
+    let maxVal = -Infinity;
+
+    for (const move of moves) {
+        const nextState = applyMoveAndResolve(rootState, move);
+        const val = alphaBeta(nextState, maxDepth - 1, alpha, beta, false, aiPlayer);
+
+        if (val > maxVal) {
+            maxVal = val;
+            bestMove = move;
+        }
+
+        alpha = Math.max(alpha, val);
+    }
+
+    return bestMove;
+};
+
+const alphaBeta = (state: AIState, depth: number, alpha: number, beta: number, isMaximizing: boolean, rootPlayer: Player): number => {
+    // 1. Check Terminal Conditions / Leaf
+    const terminalScore = evaluateTerminal(state, rootPlayer);
+    if (terminalScore !== null) {
+        return terminalScore;
+    }
+
+    if (depth === 0) {
+        return evaluateHeuristic(state, rootPlayer);
+    }
+
+    const moves = generateMoves(state);
+    if (moves.length === 0) {
+        return evaluateHeuristic(state, rootPlayer);
+    }
+
+    if (isMaximizing) {
+        let maxEval = -Infinity;
+        for (const move of moves) {
+            const nextState = applyMoveAndResolve(state, move);
+            const evalScore = alphaBeta(nextState, depth - 1, alpha, beta, false, rootPlayer);
+            maxEval = Math.max(maxEval, evalScore);
+            alpha = Math.max(alpha, evalScore);
+            if (beta <= alpha) break;
+        }
+        return maxEval;
+    } else {
+        let minEval = Infinity;
+        for (const move of moves) {
+            const nextState = applyMoveAndResolve(state, move);
+            const evalScore = alphaBeta(nextState, depth - 1, alpha, beta, true, rootPlayer);
+            minEval = Math.min(minEval, evalScore);
+            beta = Math.min(beta, evalScore);
+            if (beta <= alpha) break;
+        }
+        return minEval;
+    }
+};
+
+// --- Move Generation ---
+
+const generateMoves = (state: AIState): AiMove[] => {
     const validMoves: AiMove[] = [];
+    const { grid, currentTurn } = state;
     const boardSize = grid.length;
 
-    let aiSourceX = -1;
-    let aiSourceY = -1;
+    let sourceX = -1;
+    let sourceY = -1;
 
-    // Find AI Source for defensive calculations
     for (let y = 0; y < boardSize; y++) {
         for (let x = 0; x < boardSize; x++) {
             const cell = grid[y][x];
-            if (cell.content === 'SOURCE' && cell.owner === aiPlayer) {
-                aiSourceX = x;
-                aiSourceY = y;
+
+            if (cell.content === 'SOURCE' && cell.owner === currentTurn) {
+                sourceX = x;
+                sourceY = y;
             }
 
-            // Interaction: Place Mirror or Bomb in Empty
             if (cell.content === 'EMPTY') {
                 validMoves.push({ x, y, tool: 'MIRROR' });
                 validMoves.push({ x, y, tool: 'BOMB' });
-                // Also could place Wall?
-                // validMoves.push({ x, y, tool: 'WALL' });
             }
-            // Interaction: Rotate Mirror
-            else if (cell.owner === aiPlayer && (cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B')) {
+            else if (cell.owner === currentTurn && (cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B')) {
                 validMoves.push({ x, y, tool: 'MIRROR' });
             }
-            // Interaction: Defuse Enemy Bomb
-            else if (cell.content === 'BOMB' && cell.owner !== aiPlayer) {
+            else if (cell.content === 'BOMB' && cell.owner !== currentTurn) {
                 validMoves.push({ x, y, tool: 'DEFUSE' });
             }
         }
     }
 
-    // Interaction: Move Source
-    if (aiSourceX !== -1 && aiSourceY !== -1) {
+    if (sourceX !== -1 && sourceY !== -1) {
         const directions = [
             { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
             { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
@@ -52,9 +136,8 @@ export const calculateAiMove = (grid: Cell[][], aiPlayer: Player): AiMove | null
         ];
 
         for (const dir of directions) {
-            const newX = aiSourceX + dir.dx;
-            const newY = aiSourceY + dir.dy;
-
+            const newX = sourceX + dir.dx;
+            const newY = sourceY + dir.dy;
             if (newX >= 0 && newX < boardSize && newY >= 0 && newY < boardSize) {
                 if (grid[newY][newX].content === 'EMPTY') {
                     validMoves.push({ x: newX, y: newY, tool: 'MOVE' });
@@ -63,146 +146,176 @@ export const calculateAiMove = (grid: Cell[][], aiPlayer: Player): AiMove | null
         }
     }
 
-    if (validMoves.length === 0) return null;
+    return validMoves.sort((a, b) => {
+        if (a.tool === 'DEFUSE' && b.tool !== 'DEFUSE') return -1;
+        if (b.tool === 'DEFUSE' && a.tool !== 'DEFUSE') return 1;
 
-    // 2. Evaluate Moves
-    // We need to simulate the move, fire the laser, and check the outcome.
+        if (a.tool === 'MOVE' && b.tool !== 'MOVE') return 1;
+        if (b.tool === 'MOVE' && a.tool !== 'MOVE') return -1;
 
-    let bestMove: AiMove | null = null;
-    let bestScore = -Infinity;
+        if (a.y !== b.y) return a.y - b.y;
+        return a.x - b.x;
+    });
+};
 
-    for (const move of validMoves) {
-        // Validation: Defuse logic is simple (no laser sim needed usually, but we need to weigh it)
-        if (move.tool === 'DEFUSE') {
-            // Heuristic: Defusing is generally good if we are not winning immediately.
-            // It prevents potential future threats. 
-            // Score: 50 (Better than neutral 0, worse than Win 1000)
-            let score = 50;
+// --- State Transition ---
 
-            // Critical Threat Detection: Is this bomb near our Source?
-            if (aiSourceX !== -1) {
-                const distShapeX = Math.abs(move.x - aiSourceX);
-                const distShapeY = Math.abs(move.y - aiSourceY);
-                // Bomb radius is 1 (3x3 area). If dist <= 1, it hits us.
-                if (distShapeX <= 1 && distShapeY <= 1) {
-                    score = 900; // CRITICAL: Save the King!
-                }
-            }
+const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
+    const nextGrid = cloneGrid(state.grid);
+    const player = state.currentTurn;
+    const opponent: Player = player === 'RED' ? 'BLUE' : 'RED';
 
-            // Random jitter
-            score += Math.random();
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = move;
-            }
-            continue;
+    if (move.tool === 'MIRROR') {
+        const cell = nextGrid[move.y][move.x];
+        if (cell.content === 'EMPTY') {
+            cell.content = 'MIRROR_A';
+            cell.owner = player;
+        } else if (cell.content === 'MIRROR_A') {
+            cell.content = 'MIRROR_B';
+        } else if (cell.content === 'MIRROR_B') {
+            cell.content = 'EMPTY';
+            cell.owner = null;
         }
-
-        // Clone grid
-        const simulatedGrid = grid.map(row => row.map(c => ({ ...c })));
-        const cell = simulatedGrid[move.y][move.x];
-
-        // Apply Move Logic (Simplified version of useGameState logic)
-        if (move.tool === 'MIRROR') {
-            if (cell.content === 'EMPTY') {
-                cell.content = 'MIRROR_A';
-                cell.owner = aiPlayer;
-            } else if (cell.content === 'MIRROR_A') {
-                cell.content = 'MIRROR_B';
-            } else if (cell.content === 'MIRROR_B') {
-                // In simulation, let's assume we cycle to empty implies removing it, which is rarely good?
-                // Or we just stick to rotating. 
-                // If we rotate B -> Empty, that is a 'remove'.
-                cell.content = 'EMPTY';
-                cell.owner = null;
+    } else if (move.tool === 'BOMB') {
+        const cell = nextGrid[move.y][move.x];
+        cell.content = 'BOMB';
+        cell.owner = player;
+    } else if (move.tool === 'DEFUSE') {
+        const cell = nextGrid[move.y][move.x];
+        if (cell.content === 'BOMB') {
+            cell.content = 'EMPTY';
+            cell.owner = null;
+        }
+        return {
+            grid: nextGrid,
+            currentTurn: opponent
+        };
+    } else if (move.tool === 'MOVE') {
+        let sX = -1, sY = -1;
+        for (let y = 0; y < 10; y++) for (let x = 0; x < 10; x++) {
+            if (nextGrid[y][x].content === 'SOURCE' && nextGrid[y][x].owner === player) {
+                sX = x; sY = y; break;
             }
-        } else if (move.tool === 'BOMB') {
-            cell.content = 'BOMB';
-            cell.owner = aiPlayer;
-        } else if (move.tool === 'MOVE') {
-            // Simulate Move
-            // We know AI source pos is aiSourceX, aiSourceY.
-            // Target is move.x, move.y
-            const sourceCell = simulatedGrid[aiSourceY][aiSourceX];
-            const targetCell = simulatedGrid[move.y][move.x];
-
-            targetCell.content = sourceCell.content;
-            targetCell.owner = sourceCell.owner;
-
-            sourceCell.content = 'EMPTY';
-            sourceCell.owner = null;
         }
-
-        // Fire Laser Simulation
-        const { hit, hitType, path } = calculateLaserPath(simulatedGrid, aiPlayer);
-
-        let score = 0;
-        if (hit) {
-            if (hitType === 'SOURCE') {
-                score += 1000; // WIN
-            } else if (hitType === 'SELF') {
-                score -= 1000; // LOSE
-            } else if (hitType === 'WALL') {
-                // Hitting a wall is neutral/bad?
-                score -= 10;
-            } else if (hitType === 'BOMB') {
-                // Bomb Exploded!
-                // calculate impact
-                // The hit position is the last point in the path
-                const bombPos = path[path.length - 1]; // Should be the bomb location
-                const blastScore = calculateBlastScore(simulatedGrid, bombPos.x, bombPos.y, aiPlayer);
-                score += blastScore;
-            }
-        } else {
-            // Miss. 
-            // Maybe prefer moves that create longer paths? Or get closer to enemy source?
-            // Distance heuristic?
-            score += 0; // Neutral
-        }
-
-        // Penalize Moving if it doesn't improve score significantly (Laziness)
-        if (move.tool === 'MOVE') {
-            score -= 5; // Slight penalty to discourage random walking
-        }
-
-        // Random jitter to avoid predictable ties
-        score += Math.random();
-
-        if (score > bestScore) {
-            bestScore = score;
-            bestMove = move;
+        if (sX !== -1) {
+            const sCell = nextGrid[sY][sX];
+            const tCell = nextGrid[move.y][move.x];
+            tCell.content = sCell.content;
+            tCell.owner = sCell.owner;
+            sCell.content = 'EMPTY';
+            sCell.owner = null;
         }
     }
 
-    return bestMove;
+    const { hit, hitType, path } = calculateLaserPath(nextGrid, player);
+
+    if (hit) {
+        if (hitType === 'BOMB') {
+            const bombPos = path[path.length - 1];
+            applyBlast(nextGrid, bombPos.x, bombPos.y);
+        }
+    }
+
+    return {
+        grid: nextGrid,
+        currentTurn: opponent
+    };
 };
 
-// Helper: Calculate score based on bomb explosion
-const calculateBlastScore = (grid: Cell[][], bombX: number, bombY: number, aiPlayer: Player): number => {
-    let score = 0;
+const applyBlast = (grid: Cell[][], bombX: number, bombY: number) => {
     const boardSize = grid.length;
-
-    // 3x3 blast area
     for (let by = bombY - 1; by <= bombY + 1; by++) {
         for (let bx = bombX - 1; bx <= bombX + 1; bx++) {
             if (bx >= 0 && bx < boardSize && by >= 0 && by < boardSize) {
-                const target = grid[by][bx];
-                if (target.content === 'SOURCE') {
-                    if (target.owner !== aiPlayer) {
-                        score += 1000; // Destroyed Enemy Source (WIN)
-                    } else {
-                        score -= 1000; // Destroyed Own Source (LOSE)
-                    }
-                } else if (target.content === 'MIRROR_A' || target.content === 'MIRROR_B' || target.content === 'WALL' || target.content === 'BOMB') {
-                    if (target.owner === aiPlayer) {
-                        score -= 10; // Lost own piece
-                    } else if (target.owner) {
-                        score += 10; // Destroyed enemy piece
+                const cell = grid[by][bx];
+                if (cell.content !== 'EMPTY') {
+                    cell.content = 'EMPTY';
+                    cell.owner = null;
+                }
+            }
+        }
+    }
+};
+
+// --- Evaluation ---
+
+const evaluateTerminal = (state: AIState, rootPlayer: Player): number | null => {
+    const { grid } = state;
+    let redSource = false;
+    let blueSource = false;
+
+    for (let row of grid) {
+        for (let cell of row) {
+            if (cell.content === 'SOURCE') {
+                if (cell.owner === 'RED') redSource = true;
+                if (cell.owner === 'BLUE') blueSource = true;
+            }
+        }
+    }
+
+    const amRed = rootPlayer === 'RED';
+    const mySource = amRed ? redSource : blueSource;
+    const enemySource = amRed ? blueSource : redSource;
+
+    if (!mySource && !enemySource) return AI_CONFIG.scores.DRAW;
+    if (!mySource) return AI_CONFIG.scores.LOSS;
+    if (!enemySource) return AI_CONFIG.scores.WIN;
+
+    return null;
+};
+
+const evaluateHeuristic = (state: AIState, rootPlayer: Player): number => {
+    let score = 0;
+    const { grid } = state;
+    const boardSize = grid.length;
+
+    for (let y = 0; y < boardSize; y++) {
+        for (let x = 0; x < boardSize; x++) {
+            const cell = grid[y][x];
+            if (cell.content === 'EMPTY') continue;
+
+            const isMe = cell.owner === rootPlayer;
+            const value = isMe ? 1 : -1;
+
+            if (cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B') {
+                score += (AI_CONFIG.scores.MATERIAL_MIRROR * value);
+            } else if (cell.content === 'BOMB') {
+                score += (AI_CONFIG.scores.MATERIAL_BOMB * value);
+            }
+        }
+    }
+
+    let mySourcePos = { x: -1, y: -1 };
+
+    for (let y = 0; y < boardSize; y++) {
+        for (let x = 0; x < boardSize; x++) {
+            const c = grid[y][x];
+            if (c.content === 'SOURCE') {
+                if (c.owner === rootPlayer) mySourcePos = { x, y };
+            }
+        }
+    }
+
+    if (mySourcePos.x !== -1) {
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const nx = mySourcePos.x + dx;
+                const ny = mySourcePos.y + dy;
+                if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+                    const c = grid[ny][nx];
+                    if (c.content === 'BOMB' && c.owner !== rootPlayer) {
+                        score += AI_CONFIG.scores.THREAT_BOMB_NEAR_SOURCE;
                     }
                 }
             }
         }
     }
+
     return score;
+};
+
+// --- Helpers ---
+
+const cloneGrid = (grid: Cell[][]): Cell[][] => {
+    return grid.map(row => row.map(cell => ({ ...cell })));
 };

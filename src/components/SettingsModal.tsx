@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Music, Volume2, VolumeX } from 'lucide-react';
+import { X, Music, Volume2, VolumeX, Brain } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface SettingsModalProps {
@@ -12,7 +12,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         musicEnabled, setMusicEnabled,
         musicVolume, setMusicVolume,
         sfxEnabled, setSfxEnabled,
-        sfxVolume, setSfxVolume
+        sfxVolume, setSfxVolume,
+        aiDifficulty, setAiDifficulty
     } = useSettings();
 
     if (!isOpen) return null;
@@ -99,6 +100,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                     {Math.round(sfxVolume * 100)}%
                                 </span>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* AI Difficulty */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-purple-400 mb-2">
+                            <Brain size={20} />
+                            <label className="font-semibold tracking-wide">AI SMARTNESS</label>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
+                                <button
+                                    key={level}
+                                    onClick={() => setAiDifficulty(level)}
+                                    className={`py-2 px-1 rounded-lg text-sm font-bold transition-all ${aiDifficulty === level
+                                            ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]'
+                                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                                        }`}
+                                >
+                                    {level === 'Easy' ? 'DUMB' : level === 'Medium' ? 'NORMAL' : 'SMART'}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
