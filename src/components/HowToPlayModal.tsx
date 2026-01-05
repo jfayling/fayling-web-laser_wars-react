@@ -52,7 +52,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ isOpen, onClose 
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-white">Mirror</h4>
-                                    <p className="text-sm">Reflects the laser 90 degrees. Can be rotated.</p>
+                                    <p className="text-sm">Reflects the laser 90 degrees. Click again to rotate.</p>
                                 </div>
                             </div>
 
@@ -72,7 +72,10 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ isOpen, onClose 
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-white">Bomb</h4>
-                                    <p className="text-sm">Explodes when hit by a laser, destroying nearby items.</p>
+                                    <div className="text-sm space-y-1 text-gray-400">
+                                        <p><span className="text-red-400 font-semibold">Offensive:</span> Place on enemy Wall/Mirror to destroy it!</p>
+                                        <p><span className="text-yellow-400 font-semibold">Defensive:</span> Explodes if hit by your OWN laser.</p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -82,7 +85,27 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ isOpen, onClose 
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-white">Move Source</h4>
-                                    <p className="text-sm">Reposition your Source to a safer location.</p>
+                                    <p className="text-sm">Move your Source to an adjacent tile. Consumes your turn.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 bg-gray-800 p-4 rounded-lg">
+                                <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
+                                    <RefreshCw size={24} className="rotate-90" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-white">Rotate Source</h4>
+                                    <p className="text-sm">Rotate your Source 90° Left or Right. Changes firing direction.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3 bg-gray-800 p-4 rounded-lg">
+                                <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
+                                    <Box size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-white">Defuse</h4>
+                                    <p className="text-sm">Remove an opponent's bomb safely.</p>
                                 </div>
                             </div>
                         </div>

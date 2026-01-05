@@ -1,73 +1,98 @@
-# React + TypeScript + Vite
+# Laser Wars
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> A turn-based strategy game built with React, Vite, and TypeScript.
 
-Currently, two official plugins are available:
+**Laser Wars** is a tactical game where two players (or Player vs AI) compete to destroy the opponent's "Source" using lasers, mirrors, walls, and bombs.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Getting Started
 
-## React Compiler
+### Prerequisites
+- Node.js (v18 or higher recommended)
+- npm
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Installation
 
-## Expanding the ESLint configuration
+1.  Clone the repository:
+    ```bash
+    git clone <repository-url>
+    cd laser-wars
+    ```
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Running Locally
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Start the development server:
+```bash
+npm run dev
+```
+Access the game at `http://localhost:5173`.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+> **Note for WSL Users**: If hot reloading is not working, polling is enabled in `vite.config.ts` to support filesystem events in WSL.
+
+---
+
+## 🏗️ Project Architecture
+
+The codebase is organized to separate UI, State, and Game Logic.
+
+### Directory Structure
+```
+src/
+├── components/      # React UI Components (Board, Cell, Modals)
+├── contexts/        # Global Contexts (Settings)
+├── hooks/           # Custom Hooks (Game State, Sound)
+├── logic/           # Core Game Mechanics (Pure Functions)
+└── types.ts         # Shared TypeScript interfaces
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Key Modules
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+#### 1. Game State (`src/hooks/useGameState.ts`)
+The central nervous system of the game. It manages:
+- **Grid State**: A 10x10 array of `Cell` objects.
+- **Turn Logic**: Switches between RED and BLUE players.
+- **Tool Handling**: Validates and applies moves (Place Mirror, Rotate, Fire, etc.).
+- **Events**: Handles sound effects and win/loss conditions.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+#### 2. Game Logic (`src/logic/`)
+Core mechanics are isolated as pure functions for testability:
+- **`laserLogic.ts`**: Calculates the precise path of the laser, including reflections and collisions. It returns the path array and hit result.
+- **`aiLogic.ts`**: The AI engine. Uses an **Alpha-Beta Minimax** algorithm to calculate the best move. It simulates future turns, evaluating score based on material and threats (e.g., Offensive Bombing opportunities).
+- **`aiConfig.json`**: Configurable weights and search depths for the AI.
+
+#### 3. AI Engine
+The AI supports 3 difficulty levels (Easy, Medium, Hard) which map to search depths. It is capable of:
+- Placing Mirrors/Walls/Bombs.
+- Rotating its Source.
+- Moving its Source.
+- Defusing Bombs.
+- **Offensive Bombing**: Identifying and destroying opponent assets.
+
+## 🎮 Game Mechanics (Developer Notes)
+
+- **Grid System**: 0,0 is Top-Left. Blue starts at 0,0 (Top-Left), Red at 9,9 (Bottom-Right).
+- **Orientation**: Sources have an `orientation` (UP, RIGHT, DOWN, LEFT) determining laser firing direction.
+- **Bombs**:
+    - **Defensive**: Explode only if hit by the *owner's* laser.
+    - **Offensive**: Placing a bomb on an opponent's asset destroys it immediately and ends the turn.
+
+## 🛠️ Scripts
+
+- `npm run dev`: Start dev server.
+- `npm run build`: Compile for production (`dist/`).
+- `npm run lint`: Run ESLint.
+- `npm run preview`: Preview the production build locally.
+
+---
+
+## 🤝 Contributing
+
+- **Styling**: We use **TailwindCSS** for all styling.
+- **Icons**: Provided by `lucide-react`.
+- **State**: Prefer local state for UI, and `useGameState` for game logic. Avoid complex global stores unless necessary.
+
+Happy Coding! 🚀
