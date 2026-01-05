@@ -16,7 +16,7 @@ The AI follows a standard Minimax search with Alpha-Beta pruning:
 ### 2.1 Identify Valid Moves
 The AI generates all legal moves for the current board state:
 *   **Place Mirror**: In empty cells.
-*   **Place Bomb**: In empty cells.
+*   **Place Bomb**: In empty cells (Defensive) or on Opponent's Wall/Mirror (Offensive).
 *   **Rotate Mirror**: For owned mirrors.
 *   **Defuse Bomb**: For opponent bombs.
 *   **Rotate Source**: 90 degrees Left or Right.

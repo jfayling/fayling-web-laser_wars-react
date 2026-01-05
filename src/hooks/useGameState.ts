@@ -179,7 +179,7 @@ export const useGameState = (
             if (prev.moveStartPos && currentTool !== 'MOVE') return prev;
 
             // Check ownership and modify
-            if (cell.owner !== null && cell.owner !== prev.turn && currentTool !== 'DEFUSE') return prev;
+            if (cell.owner !== null && cell.owner !== prev.turn && currentTool !== 'DEFUSE' && currentTool !== 'BOMB') return prev;
             if (cell.content === 'BLOCK') return prev;
             if (cell.content === 'SOURCE' && currentTool !== 'ROTATE_LEFT' && currentTool !== 'ROTATE_RIGHT') return prev;
 
@@ -211,7 +211,23 @@ export const useGameState = (
                     if (isStartingNewMove) newActiveCell = { x, y };
                 }
             } else if (currentTool === 'BOMB') {
-                if (cell.content === 'BOMB') {
+                // Offensive Bomb Logic
+                if (cell.owner !== null && cell.owner !== prev.turn) {
+                    if (cell.content === 'WALL' || cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B') {
+                        // Destroy opponent's asset
+                        cell.content = 'EMPTY';
+                        cell.owner = null;
+                        if (playExplosionSound) playExplosionSound();
+
+                        // End turn immediately
+                        nextTurn = prev.turn === 'BLUE' ? 'RED' : 'BLUE';
+                        newActiveCell = null;
+                    } else {
+                        return prev; // Invalid target for offensive bomb
+                    }
+                }
+                // Defensive/Normal Bomb Logic
+                else if (cell.content === 'BOMB') {
                     cell.content = 'EMPTY';
                     cell.owner = null;
                     if (isModifyingActive) newActiveCell = null;

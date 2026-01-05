@@ -120,6 +120,9 @@ const generateMoves = (state: AIState): AiMove[] => {
                 validMoves.push({ x, y, tool: 'MIRROR' });
                 validMoves.push({ x, y, tool: 'BOMB' });
             }
+            else if (cell.owner && cell.owner !== currentTurn && (cell.content === 'WALL' || cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B')) {
+                validMoves.push({ x, y, tool: 'BOMB' });
+            }
             else if (cell.owner === currentTurn && (cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B')) {
                 validMoves.push({ x, y, tool: 'MIRROR' });
             }
@@ -180,6 +183,16 @@ const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
         }
     } else if (move.tool === 'BOMB') {
         const cell = nextGrid[move.y][move.x];
+        // Offensive Bomb
+        if (cell.owner && cell.owner !== player && (cell.content === 'WALL' || cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B')) {
+            cell.content = 'EMPTY';
+            cell.owner = null;
+            return {
+                grid: nextGrid,
+                currentTurn: opponent
+            };
+        }
+        // Normal Placement
         cell.content = 'BOMB';
         cell.owner = player;
     } else if (move.tool === 'DEFUSE') {

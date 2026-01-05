@@ -59,11 +59,16 @@ Once the move is set, the player clicks **"FIRE LASER"**.
 - Useful for defense.
 
 ### Bombs
-- **Trigger**: ONLY when hit by your **OWN Laser**.
-  - If hit by your *own* laser, it explodes.
-  - If hit by an *opponent's* laser, it acts like a Wall (stops the laser, no explosion).
-  - The laser **stops** at the bomb in both cases (it does not pass through).
-- **Effect**: Explodes a **3x3 area** centered on the bomb.
+- **Defensive Usage**: Place on an empty cell.
+    - **Trigger**: ONLY when hit by your **OWN Laser**.
+    - If hit by your *own* laser, it explodes.
+    - If hit by an *opponent's* laser, it acts like a Wall (stops the laser, no explosion).
+    - The laser **stops** at the bomb in both cases (it does not pass through).
+- **Offensive Usage**: Click on an **Opponent's Wall or Mirror** with the Bomb tool.
+    - **Effect**: Immediately destroys the target piece (sets it to Empty).
+    - **Cost**: Your turn ends immediately (skips firing).
+    - A sound effect plays to confirm the destruction.
+- **Explosion Effect** (Defensive Trigger): Explodes a **3x3 area** centered on the bomb.
 - **Destruction**:
   - Destroys **Mirrors**, **Walls**, **Bombs**.
   - Destroys **Sources** (Causes immediate loss for the Source owner).
