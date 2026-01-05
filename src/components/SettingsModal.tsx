@@ -5,9 +5,11 @@ import { useSettings } from '../contexts/SettingsContext';
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onRestart: () => void;
+    onQuit: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onRestart, onQuit }) => {
     const {
         musicEnabled, setMusicEnabled,
         musicVolume, setMusicVolume,
@@ -115,8 +117,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                     key={level}
                                     onClick={() => setAiDifficulty(level)}
                                     className={`py-2 px-1 rounded-lg text-sm font-bold transition-all ${aiDifficulty === level
-                                            ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]'
-                                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                                        ? 'bg-purple-500 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]'
+                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-200'
                                         }`}
                                 >
                                     {level === 'Easy' ? 'DUMB' : level === 'Medium' ? 'NORMAL' : 'SMART'}
@@ -126,12 +128,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-gray-800 flex justify-center">
+                <div className="mt-8 pt-6 border-t border-gray-800 flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            onClick={onRestart}
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-sm shadow-[0_0_15px_rgba(37,99,235,0.4)]"
+                        >
+                            Restart Game
+                        </button>
+                        <button
+                            onClick={onQuit}
+                            className="px-6 py-3 bg-red-600 hover:bg-red-500 text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-sm shadow-[0_0_15px_rgba(220,38,38,0.4)]"
+                        >
+                            Quit to Menu
+                        </button>
+                    </div>
+
                     <button
                         onClick={onClose}
-                        className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-sm"
+                        className="w-full px-6 py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-xs"
                     >
-                        Close
+                        Close Menu
                     </button>
                 </div>
             </div>

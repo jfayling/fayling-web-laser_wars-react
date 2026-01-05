@@ -18,8 +18,20 @@ function App() {
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { playPlaceSound, playRotateSound, playFireSound, playWinSound, playExplosionSound, playWallHitSound } = useSound();
-  const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool } = useGameState(playExplosionSound, playWallHitSound);
+  const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame } = useGameState(playExplosionSound, playWallHitSound);
   const { aiDifficulty } = useSettings();
+
+  const handleRestart = () => {
+    resetGame();
+    setIsSettingsOpen(false);
+    playPlaceSound();
+  };
+
+  const handleQuit = () => {
+    resetGame();
+    setGameMode(null);
+    setIsSettingsOpen(false);
+  };
 
   // AI Logic
   useEffect(() => {
@@ -266,7 +278,12 @@ function App() {
       )}
 
       <MusicControls />
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onRestart={handleRestart}
+        onQuit={handleQuit}
+      />
     </div>
   );
 }

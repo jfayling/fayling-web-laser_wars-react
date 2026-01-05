@@ -428,11 +428,27 @@ export const useGameState = (
     // However, if grid changes (e.g. removed source? unlikely), we might need to update.
     // But turn change handles reset.
 
+    const resetGame = useCallback(() => {
+        setGameState({
+            grid: createInitialGrid(),
+            turn: 'BLUE',
+            isFiring: false,
+            winner: null,
+            laserPath: [],
+            activeCell: null,
+            originalOrientation: null,
+            validMoves: undefined,
+            moveStartPos: null
+        });
+        setSelectedTool('MIRROR');
+    }, []);
+
     return {
         gameState,
         handleCellClick,
         fireLaser,
         selectedTool,
-        setSelectedTool
+        setSelectedTool,
+        resetGame
     };
 };
