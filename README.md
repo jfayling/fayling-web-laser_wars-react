@@ -100,6 +100,25 @@ Example: `http://localhost:5173/?features=AUTO_START_TRAINING`
 
 ---
 
+## 🚢 Deployment
+
+This project includes a built-in deployment script for AWS S3.
+
+### Usage
+```bash
+node scripts/deploy.js --profile <AWS_PROFILE> --bucket <BUCKET_NAME> --path <TARGET_PATH>
+```
+
+### Arguments
+- `--profile`: Your AWS CLI profile name (must be configured in `~/.aws/credentials`).
+- `--bucket`: The name of the S3 bucket to deploy to.
+- `--path`: The sub-directory path within the bucket (e.g., `/my-game/`). The build will automatically use this as the `base` URL for assets.
+
+### Example
+```bash
+node scripts/deploy.js --profile my-profile --bucket my-game-bucket --path /laser-wars/
+```
+
 ## 🤝 Contributing
 
 - **Styling**: We use **TailwindCSS** for all styling.
