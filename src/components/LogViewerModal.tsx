@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, FileText, Download } from 'lucide-react';
+import { X, FileText, Download, Copy } from 'lucide-react';
 import type { RecordedMove } from '../types';
 
 interface LogViewerModalProps {
@@ -7,9 +7,10 @@ interface LogViewerModalProps {
     onClose: () => void;
     moves: RecordedMove[];
     onExport?: () => void;
+    onCopy?: () => void;
 }
 
-export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose, moves, onExport }) => {
+export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose, moves, onExport, onCopy }) => {
     if (!isOpen) return null;
 
     return (
@@ -76,15 +77,26 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose,
                 </div>
 
                 <div className="mt-4 flex justify-between items-center">
-                    {onExport && (
-                        <button
-                            onClick={onExport}
-                            className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-xs shadow-lg shadow-green-900/20"
-                        >
-                            <Download size={16} />
-                            Export Data
-                        </button>
-                    )}
+                    <div className="flex gap-3">
+                        {onExport && (
+                            <button
+                                onClick={onExport}
+                                className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-xs shadow-lg shadow-green-900/20"
+                            >
+                                <Download size={16} />
+                                Export Data
+                            </button>
+                        )}
+                        {onCopy && (
+                            <button
+                                onClick={onCopy}
+                                className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-xs shadow-lg shadow-blue-900/20"
+                            >
+                                <Copy size={16} />
+                                Copy JSON
+                            </button>
+                        )}
+                    </div>
                     <button
                         onClick={onClose}
                         className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-xs"

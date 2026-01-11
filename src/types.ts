@@ -29,6 +29,7 @@ export interface GameState {
     validMoves?: Point[];
     moveStartPos?: Point | null;
     originalOrientation?: Direction | null;
+    isNewPlacement?: boolean;
 }
 
 export type ToolType = 'MIRROR' | 'WALL' | 'BOMB' | 'ERASER' | 'DEFUSE' | 'MOVE' | 'ROTATE_LEFT' | 'ROTATE_RIGHT';

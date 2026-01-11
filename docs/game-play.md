@@ -60,10 +60,10 @@ Once the move is set, the player clicks **"FIRE LASER"**.
 
 ### Bombs
 - **Defensive Usage**: Place on an empty cell.
-    - **Trigger**: ONLY when hit by your **OWN Laser**.
-    - If hit by your *own* laser, it explodes.
-    - If hit by an *opponent's* laser, it acts like a Wall (stops the laser, no explosion).
-    - The laser **stops** at the bomb in both cases (it does not pass through).
+    - **Trigger**: Hit by **ANY Laser** (Yours or Opponent's).
+    - If hit by a laser, it explodes immediately.
+    - The laser **stops** at the bomb (it does not pass through).
+    - **Strategy**: You can intentionally shoot enemy bombs to detonate them!
 - **Offensive Usage**: Click on an **Opponent's Wall or Mirror** with the Bomb tool.
     - **Effect**: Immediately destroys the target piece (sets it to Empty).
     - **Cost**: Your turn ends immediately (skips firing).
@@ -110,3 +110,13 @@ Once the move is set, the player clicks **"FIRE LASER"**.
 - **Click**: Place or interact with a cell.
 - **Toolbar**: Select piece type (Mirror, Wall, Bomb, Eraser, Defuse, Rotate Left, Rotate Right).
 - **Fire Button**: Ends turn and fires laser.
+
+## 6. Training Mode & Logs
+**Training Mode** allows you to record game sessions for AI analysis or debugging.
+- **Enable**:
+    - Add `?features=ALLOW_TRAINING` to see the toggle.
+    - Add `?features=AUTO_START_TRAINING` to auto-enable it on load.
+- **Live Logs**: Click the **Logs** button (file icon) during gameplay to view a real-time table of moves.
+- **Export**:
+    - **Copy to Clipboard**: Copy JSON data directly from the Log Viewer.
+    - **View Logs**: After a game ends, click "VIEW LOGS" to inspect and save the match data.

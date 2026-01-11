@@ -134,7 +134,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                 {(() => {
                     const params = new URLSearchParams(window.location.search);
                     const features = params.get('features')?.split(',') || [];
-                    const allowTraining = features.includes('ALLOW_TRAINING');
+                    const allowTraining = features.includes('ALLOW_TRAINING') || features.includes('AUTO_START_TRAINING');
 
                     if (!allowTraining) return null;
 

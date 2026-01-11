@@ -56,7 +56,8 @@ export const useGameState = (
         winner: null,
         laserPath: [],
         activeCell: null,
-        originalOrientation: null
+        originalOrientation: null,
+        isNewPlacement: false
     });
 
     const [selectedTool, setSelectedTool] = useState<ToolType>('MIRROR');
@@ -117,6 +118,7 @@ export const useGameState = (
             let nextTurn = prev.turn;
             let newActiveCell = prev.activeCell;
             let newValidMoves: { x: number, y: number }[] | undefined = undefined;
+            let newIsNewPlacement = prev.isNewPlacement;
 
 
             // If we are modifying a cell (creating a new active cell or editing existing active)
@@ -187,18 +189,37 @@ export const useGameState = (
                 if (cell.content === 'EMPTY') {
                     cell.content = 'MIRROR_A';
                     cell.owner = prev.turn;
-                    if (isStartingNewMove) newActiveCell = { x, y };
+                    if (isStartingNewMove) {
+                        newActiveCell = { x, y };
+                        newIsNewPlacement = true;
+                    }
                 } else if (cell.content === 'MIRROR_A') {
                     cell.content = 'MIRROR_B';
-                    if (isStartingNewMove) newActiveCell = { x, y };
+                    if (isStartingNewMove) {
+                        newActiveCell = { x, y };
+                        newIsNewPlacement = false;
+                    }
                 } else if (cell.content === 'MIRROR_B') {
-                    cell.content = 'EMPTY';
-                    cell.owner = null;
-                    if (isModifyingActive) newActiveCell = null;
+                    // Logic: If it's a new placement (placed this turn), allow undo to Empty.
+                    // If it's an existing piece (from previous turn), rotate back to A.
+                    if (isModifyingActive && newIsNewPlacement) {
+                        cell.content = 'EMPTY';
+                        cell.owner = null;
+                        newActiveCell = null;
+                    } else {
+                        cell.content = 'MIRROR_A';
+                        if (isStartingNewMove) {
+                            newActiveCell = { x, y };
+                            newIsNewPlacement = false;
+                        }
+                    }
                 } else if (cell.content === 'WALL' || cell.content === 'BOMB') {
                     cell.content = 'MIRROR_A';
                     cell.owner = prev.turn;
-                    if (isStartingNewMove) newActiveCell = { x, y };
+                    if (isStartingNewMove) {
+                        newActiveCell = { x, y };
+                        newIsNewPlacement = true;
+                    }
                 }
             } else if (currentTool === 'WALL') {
                 if (cell.content === 'WALL') {
@@ -303,7 +324,8 @@ export const useGameState = (
                 grid: newGrid,
                 laserPath: [],
                 turn: nextTurn,
-                activeCell: newActiveCell
+                activeCell: newActiveCell,
+                isNewPlacement: newIsNewPlacement
             };
         });
     }, [selectedTool]);
@@ -398,7 +420,8 @@ export const useGameState = (
                     activeCell: null,
                     validMoves: undefined,
                     moveStartPos: null,
-                    originalOrientation: null // Reset rotation intent
+                    originalOrientation: null, // Reset rotation intent
+                    isNewPlacement: false
                 };
             });
         }, 2000);
@@ -459,7 +482,8 @@ export const useGameState = (
             activeCell: null,
             originalOrientation: null,
             validMoves: undefined,
-            moveStartPos: null
+            moveStartPos: null,
+            isNewPlacement: false
         });
         setSelectedTool('MIRROR');
     }, []);

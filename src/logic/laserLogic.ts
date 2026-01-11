@@ -80,13 +80,8 @@ export const calculateLaserPath = (grid: Cell[][], firingPlayer: Player): LaserP
         if (cell.content === 'BLOCK' || cell.content === 'WALL') {
             return { path, hit: false, hitType: 'WALL' };
         } else if (cell.content === 'BOMB') {
-            if (cell.owner === firingPlayer) {
-                // Friendly Bomb: Hit & Explode (Triggered by own laser)
-                return { path, hit: true, hitType: 'BOMB' };
-            } else {
-                // Enemy Bomb: Hit & Stop (Acts like Wall)
-                return { path, hit: false, hitType: 'WALL' };
-            }
+            // Any bomb hit by a laser explodes!
+            return { path, hit: true, hitType: 'BOMB' };
         } else if (cell.content === 'SOURCE') {
             if (cell.owner !== firingPlayer) {
                 return { path, hit: true, hitType: 'SOURCE' }; // WIN

@@ -15,20 +15,21 @@ The AI follows a standard Minimax search with Alpha-Beta pruning:
 
 ### 2.1 Identify Valid Moves
 The AI generates all legal moves for the current board state:
-*   **Place Mirror**: In empty cells.
+*   **Place Mirror**: In empty cells. Considers both **Mirror A (/)** and **Mirror B (\)** variations.
 *   **Place Bomb**: In empty cells (Defensive) or on Opponent's Wall/Mirror (Offensive).
 *   **Rotate Mirror**: For owned mirrors.
 *   **Defuse Bomb**: For opponent bombs.
 *   **Rotate Source**: 90 degrees Left or Right.
 *   **Move Source**: To adjacent empty cells.
 
-Moves are sorted by heuristic priority (e.g., Defuse > Mirror > Bomb > Move) to optimize Alpha-Beta pruning performance.
+Moves are sorted by heuristic priority (e.g., Defuse > Move > Mirror > Bomb) to optimize Alpha-Beta pruning performance.
 
 ### 2.2 Simulation & Evaluation
 For each move in the search tree, the AI:
 1.  **Applies the Move**: Updates the grid (Planning Phase).
+    - *Mirror B Logic*: AI simulates the "double-click" required to place a Type B mirror.
 2.  **Resolves Action**: Simulates the laser fire (Action Phase).
-    - If a bomb is hit by its owner, it explodes (clearing a 3x3 area).
+    - If a bomb is hit by **ANY** laser (friendly or enemy), it explodes (clearing a 3x3 area).
 3.  **Recursive Search**: Recursively evaluates the resulting state from the opponent's perspective (Minimizing player).
 
 ### 2.3 Evaluation Function (Leaf Nodes)
@@ -42,11 +43,16 @@ When the search reaches maximum depth or a terminal state, the board is scored:
 
 ### 2.4 Selection
 The AI selects the move that maximizes the minimum guaranteed score (Minimax). 
-- Ties are broken deterministically by move type and coordinates.
-- Randomness has been removed to ensure predictable, testable behavior.
+- **Randomness**: If multiple moves share the exact same top score, the AI **randomly selects one**. This prevents infinite loops and repetitive behavior.
 
 ## 3. Constraints & Limitations
 
 *   **Move Set**: Supports Mirror, Bomb, Defuse, and Source Move. Block placement is currently not utilized by the AI.
 *   **Performance**: Search depth is limited (Default 3) to ensure responsiveness.
 *   **Rules Adherence**: The AI strictly follows game rules, including turn-ending mechanics for Defusing.
+
+## 4. Training Data Collection
+The engine supports a **Training Mode** to facilitate Machine Learning research.
+- **Recording**: Captures every move (Turn, Action, Coordinates, Timestamp).
+- **Format**: Data is exported as JSON sessions.
+- **Usage**: This data is intended to train future iterations of the AI (e.g., Nueral Networks) to replace or augment the Alpha-Beta engine.

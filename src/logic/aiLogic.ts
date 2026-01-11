@@ -9,6 +9,7 @@ export interface AiMove {
     y: number;
     tool: ToolType;
     score?: number;
+    details?: string;
 }
 
 interface AIState {
@@ -36,7 +37,7 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
     const moves = generateMoves(rootState);
     if (moves.length === 0) return null;
 
-    let bestMove: AiMove | null = null;
+    let bestMoves: AiMove[] = [];
     let alpha = -Infinity;
     let beta = Infinity;
     let maxVal = -Infinity;
@@ -47,13 +48,16 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
 
         if (val > maxVal) {
             maxVal = val;
-            bestMove = move;
+            bestMoves = [move];
+        } else if (val === maxVal) {
+            bestMoves.push(move);
         }
 
         alpha = Math.max(alpha, val);
     }
 
-    return bestMove;
+    if (bestMoves.length === 0) return null;
+    return bestMoves[Math.floor(Math.random() * bestMoves.length)];
 };
 
 const alphaBeta = (state: AIState, depth: number, alpha: number, beta: number, isMaximizing: boolean, rootPlayer: Player): number => {
@@ -117,14 +121,17 @@ const generateMoves = (state: AIState): AiMove[] => {
             }
 
             if (cell.content === 'EMPTY') {
-                validMoves.push({ x, y, tool: 'MIRROR' });
+                validMoves.push({ x, y, tool: 'MIRROR', details: 'MIRROR_A' });
+                validMoves.push({ x, y, tool: 'MIRROR', details: 'MIRROR_B' });
                 validMoves.push({ x, y, tool: 'BOMB' });
             }
             else if (cell.owner && cell.owner !== currentTurn && (cell.content === 'WALL' || cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B')) {
                 validMoves.push({ x, y, tool: 'BOMB' });
             }
             else if (cell.owner === currentTurn && (cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B')) {
-                validMoves.push({ x, y, tool: 'MIRROR' });
+                // If we own a mirror, we can rotate it to the OTHER type
+                const otherType = cell.content === 'MIRROR_A' ? 'MIRROR_B' : 'MIRROR_A';
+                validMoves.push({ x, y, tool: 'MIRROR', details: otherType });
             }
             else if (cell.content === 'BOMB' && cell.owner !== currentTurn) {
                 validMoves.push({ x, y, tool: 'DEFUSE' });
@@ -172,14 +179,20 @@ const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
 
     if (move.tool === 'MIRROR') {
         const cell = nextGrid[move.y][move.x];
-        if (cell.content === 'EMPTY') {
-            cell.content = 'MIRROR_A';
+        if (move.details) {
+            cell.content = move.details as any;
             cell.owner = player;
-        } else if (cell.content === 'MIRROR_A') {
-            cell.content = 'MIRROR_B';
-        } else if (cell.content === 'MIRROR_B') {
-            cell.content = 'EMPTY';
-            cell.owner = null;
+        } else {
+            // Fallback for safety using simple toggle logic
+            if (cell.content === 'EMPTY') {
+                cell.content = 'MIRROR_A';
+                cell.owner = player;
+            } else if (cell.content === 'MIRROR_A') {
+                cell.content = 'MIRROR_B';
+            } else if (cell.content === 'MIRROR_B') {
+                cell.content = 'EMPTY';
+                cell.owner = null;
+            }
         }
     } else if (move.tool === 'BOMB') {
         const cell = nextGrid[move.y][move.x];

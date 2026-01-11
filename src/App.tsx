@@ -24,7 +24,11 @@ function App() {
   const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame } = useGameState(playExplosionSound, playWallHitSound);
   const { aiDifficulty } = useSettings();
 
-  const [isTrainingMode, setIsTrainingMode] = useState(false);
+  const [isTrainingMode, setIsTrainingMode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const features = params.get('features')?.split(',') || [];
+    return features.includes('AUTO_START_TRAINING');
+  });
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
   const [moveHistory, setMoveHistory] = useState<RecordedMove[]>([]);
 
@@ -84,17 +88,19 @@ function App() {
     setIsLogViewerOpen(false);
   };
 
-  const downloadTrainingData = () => {
-    if (moveHistory.length === 0) return;
-
-    const session: GameSession = {
+  const generateSessionData = (): GameSession => {
+    return {
       date: new Date().toISOString(),
       mode: gameMode || 'PVP',
       winner: gameState.winner,
       winReason: gameState.winReason,
       moves: moveHistory
     };
+  };
 
+  const downloadTrainingData = () => {
+    if (moveHistory.length === 0) return;
+    const session = generateSessionData();
     const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -104,6 +110,17 @@ function App() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const copyTrainingData = async () => {
+    if (moveHistory.length === 0) return;
+    const session = generateSessionData();
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(session, null, 2));
+      // Could show a toast here, but for now silent success is okay or we rely on modal feedback if implemented
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+    }
   };
 
   // AI Logic
@@ -135,6 +152,16 @@ function App() {
             }
           } else {
             handleCellClick(move.x, move.y, move.tool);
+
+            // If the AI wants MIRROR_B, we need to click again to rotate it from A to B
+            if (move.tool === 'MIRROR' && move.details === 'MIRROR_B') {
+              // Small delay not needed for logic, but might be safer for state update or just immediate call
+              // Since handleCellClick uses a functional state update, immediate call should be fine if logic permits
+              // or we just trust the state update queue. 
+              // Actually, handleCellClick logic for MIRROR is: Empty -> A -> B -> Empty.
+              // So calling it twice results in B.
+              handleCellClick(move.x, move.y, 'MIRROR');
+            }
           }
 
           // Check if this move ends the turn immediately (Defuse, Offensive Bomb)
@@ -467,6 +494,7 @@ function App() {
         onClose={() => setIsLogViewerOpen(false)}
         moves={moveHistory}
         onExport={downloadTrainingData}
+        onCopy={copyTrainingData}
       />
     </div>
   );

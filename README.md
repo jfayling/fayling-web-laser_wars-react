@@ -80,6 +80,17 @@ The AI supports 3 difficulty levels (Easy, Medium, Hard) which map to search dep
     - **Defensive**: Explode only if hit by the *owner's* laser.
     - **Offensive**: Placing a bomb on an opponent's asset destroys it immediately and ends the turn.
 
+## 🚩 Feature Flags
+
+You can enable experimental or debug features by adding query parameters to the URL (e.g., `?features=FLAG_NAME`).
+
+| Flag | Description |
+| :--- | :--- |
+| `ALLOW_TRAINING` | Shows the **Training Mode** toggle in the Settings menu. |
+| `AUTO_START_TRAINING` | Automatically enables Training Mode on startup and shows the toggle. |
+
+Example: `http://localhost:5173/?features=AUTO_START_TRAINING`
+
 ## 🛠️ Scripts
 
 - `npm run dev`: Start dev server.
