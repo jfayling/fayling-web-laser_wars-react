@@ -56,6 +56,18 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
         alpha = Math.max(alpha, val);
     }
 
+    // Panic Mode: If we are threatened, and we didn't find a winning move, force DEFUSE if available.
+    const rootScore = evaluateHeuristic(rootState, aiPlayer);
+    const isThreatened = rootScore <= -2000; // Threshold for THREAT_BOMB_NEAR_SOURCE
+    const isWinning = maxVal >= AI_CONFIG.scores.WIN - 1000;
+
+    if (isThreatened && !isWinning) {
+        const defuseMove = moves.find(m => m.tool === 'DEFUSE');
+        if (defuseMove) {
+            return defuseMove;
+        }
+    }
+
     if (bestMoves.length === 0) return null;
     return bestMoves[Math.floor(Math.random() * bestMoves.length)];
 };

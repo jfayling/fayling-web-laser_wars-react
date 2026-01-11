@@ -5,7 +5,7 @@
         "DRAW": -500,
         "MATERIAL_MIRROR": 10,
         "MATERIAL_BOMB": 2,
-        "THREAT_BOMB_NEAR_SOURCE": -900
+        "THREAT_BOMB_NEAR_SOURCE": -5000
     },
     "depths": {
         "Easy": 1,
