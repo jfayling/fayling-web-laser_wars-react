@@ -343,13 +343,16 @@ export const useGameState = (
             const { path, hit, hitType } = calculateLaserPath(prev.grid, prev.turn);
 
             let winner: Player | null = prev.winner;
+            let winReason: import('../types').WinReason | null = null;
             let newGrid = prev.grid;
 
             if (hit) {
                 if (hitType === 'SOURCE') {
                     winner = prev.turn;
+                    winReason = 'ELIMINATION';
                 } else if (hitType === 'SELF') {
                     winner = prev.turn === 'BLUE' ? 'RED' : 'BLUE';
+                    winReason = 'SUICIDE';
                 } else if (hitType === 'WALL') {
                     if (playWallHitSound) playWallHitSound();
                 } else if (hitType === 'BOMB') {
@@ -365,6 +368,7 @@ export const useGameState = (
 
                     if (explosionWinner) {
                         winner = explosionWinner;
+                        winReason = 'BOMB';
                     }
                 }
             }
@@ -374,7 +378,8 @@ export const useGameState = (
                 grid: newGrid,
                 isFiring: true,
                 laserPath: path,
-                winner: winner
+                winner: winner,
+                winReason: winReason
             };
         });
 

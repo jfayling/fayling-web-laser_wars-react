@@ -7,9 +7,11 @@ interface SettingsModalProps {
     onClose: () => void;
     onRestart: () => void;
     onQuit: () => void;
+    isTrainingMode?: boolean;
+    setIsTrainingMode?: (enabled: boolean) => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onRestart, onQuit }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onRestart, onQuit, isTrainingMode, setIsTrainingMode }) => {
     const {
         musicEnabled, setMusicEnabled,
         musicVolume, setMusicVolume,
@@ -128,6 +130,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                     </div>
                 </div>
 
+                {/* Training Mode */}
+                {(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    const features = params.get('features')?.split(',') || [];
+                    const allowTraining = features.includes('ALLOW_TRAINING');
+
+                    if (!allowTraining) return null;
+
+                    return setIsTrainingMode && isTrainingMode !== undefined && (
+                        <div className="space-y-3 pt-4 border-t border-gray-800">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 text-green-400">
+                                    <Brain size={20} />
+                                    <label className="font-semibold tracking-wide">TRAINING MODE</label>
+                                </div>
+                                <button
+                                    onClick={() => setIsTrainingMode(!isTrainingMode)}
+                                    className={`w-12 h-6 rounded-full transition-colors duration-200 ease-in-out relative ${isTrainingMode ? 'bg-green-500' : 'bg-gray-700'
+                                        }`}
+                                >
+                                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform duration-200 ${isTrainingMode ? 'left-7' : 'left-1'
+                                        }`} />
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-400">
+                                Record game moves to a JSON file for AI training.
+                            </p>
+                        </div>
+                    );
+                })()}
+
                 <div className="mt-8 pt-6 border-t border-gray-800 flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-4">
                         <button
@@ -152,6 +185,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

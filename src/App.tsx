@@ -11,6 +11,9 @@ import clsx from 'clsx';
 import { Settings as SettingsIcon } from 'lucide-react';
 import { useSettings } from './contexts/SettingsContext';
 import { SettingsModal } from './components/SettingsModal';
+import { LogViewerModal } from './components/LogViewerModal';
+import { FileText } from 'lucide-react';
+import type { RecordedMove, GameSession } from './types';
 
 export type GameMode = 'PVP' | 'PVE' | null;
 
@@ -21,16 +24,86 @@ function App() {
   const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame } = useGameState(playExplosionSound, playWallHitSound);
   const { aiDifficulty } = useSettings();
 
+  const [isTrainingMode, setIsTrainingMode] = useState(false);
+  const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
+  const [moveHistory, setMoveHistory] = useState<RecordedMove[]>([]);
+
+  const captureMove = (currentGameState: import('./types').GameState, actionType: import('./types').ToolType | 'PASS' = 'PASS'): RecordedMove => {
+    // If we have an active cell, that's where the action happened. 
+    // If not, and it's a pass, we use -1, -1.
+    // NOTE: This captures state BEFORE the fire/turn end.
+
+    let x = -1;
+    let y = -1;
+    let details = '';
+
+    if (currentGameState.activeCell) {
+      x = currentGameState.activeCell.x;
+      y = currentGameState.activeCell.y;
+
+      const cell = currentGameState.grid[y][x];
+      // Capture details about what was placed/changed
+      if (cell.content.startsWith('MIRROR')) details = cell.content;
+      else if (cell.content === 'WALL') details = 'WALL';
+      else if (cell.content === 'BOMB') details = 'BOMB';
+      // For move and rotate, we trust the actionType passed in, but could add more info from cell
+    }
+
+    if (actionType === 'MOVE' && currentGameState.moveStartPos) {
+      // If we moved, the active cell is the DESTINATION. 
+      // We might want to record source too in details?
+      // For now, simpler is better.
+      details = `FROM_${currentGameState.moveStartPos.x}_${currentGameState.moveStartPos.y}`;
+    }
+
+    return {
+      turn: currentGameState.turn,
+      actionType,
+      x,
+      y,
+      details,
+      timestamp: Date.now()
+    };
+  };
+
   const handleRestart = () => {
     resetGame();
+    setMoveHistory([]); // Clear history
+    setMoveHistory([]); // Clear history
     setIsSettingsOpen(false);
+    setIsLogViewerOpen(false);
     playPlaceSound();
   };
 
   const handleQuit = () => {
     resetGame();
+    setMoveHistory([]); // Clear history
+    setGameMode(null);
     setGameMode(null);
     setIsSettingsOpen(false);
+    setIsLogViewerOpen(false);
+  };
+
+  const downloadTrainingData = () => {
+    if (moveHistory.length === 0) return;
+
+    const session: GameSession = {
+      date: new Date().toISOString(),
+      mode: gameMode || 'PVP',
+      winner: gameState.winner,
+      winReason: gameState.winReason,
+      moves: moveHistory
+    };
+
+    const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `laser-wars-training-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // AI Logic
@@ -64,6 +137,37 @@ function App() {
             handleCellClick(move.x, move.y, move.tool);
           }
 
+          // Check if this move ends the turn immediately (Defuse, Offensive Bomb)
+          let isTerminal = false;
+          if (move.tool === 'DEFUSE') {
+            const cell = gameState.grid[move.y][move.x];
+            // If defusing opponent bomb, it's terminal
+            if (cell.content === 'BOMB' && cell.owner === 'BLUE') isTerminal = true;
+          } else if (move.tool === 'BOMB') {
+            const cell = gameState.grid[move.y][move.x];
+            // If bombing opponent piece, it's terminal
+            if (cell.owner && cell.owner !== 'RED') isTerminal = true;
+          }
+
+          // Record AI Move Immediately (before async delay/state updates)
+          if (isTrainingMode) {
+            setMoveHistory(prev => [...prev, {
+              turn: 'RED',
+              actionType: move.tool,
+              x: move.x,
+              y: move.y,
+              timestamp: Date.now(),
+              details: move.tool === 'MOVE' ? 'AI_MOVE' : (isTerminal ? 'TERMINAL_ACTION' : undefined)
+            }]);
+          }
+
+          if (isTerminal) {
+            // Turn ends immediately, NO LASER PHASE.
+            // handleCellClick has already toggled the turn in state.
+            // We just stop here.
+            return;
+          }
+
           // Fire after short delay
           setTimeout(() => {
             playFireSound();
@@ -71,6 +175,15 @@ function App() {
           }, 500);
         } else {
           // No move? Just fire.
+          if (isTrainingMode) {
+            setMoveHistory(prev => [...prev, {
+              turn: 'RED',
+              actionType: 'PASS',
+              x: -1,
+              y: -1,
+              timestamp: Date.now()
+            }]);
+          }
           playFireSound();
           fireLaser();
         }
@@ -112,6 +225,49 @@ function App() {
   };
 
   const onFireWrapper = () => {
+    if (isTrainingMode) {
+      // Determine what the user did. 
+      // If selectedTool is MOVE, and we have activeCell, it was a move.
+      // If activeCell is null, it was a PASS.
+      // But wait, if they clicked a Mirror and placed it, activeCell is set?
+      // Let's check logic: handleCellClick sets activeCell to the one modified.
+      // So if activeCell is not null, they did something. 
+      // Exception: If they just clicked a tool but didn't click board? activeCell is null.
+
+      let action: import('./types').ToolType | 'PASS' = 'PASS';
+      if (gameState.activeCell) {
+        // How to know which tool was used? 
+        // We can infer from the cell change or just use 'selectedTool'. 
+        // If they rotated, selectedTool might be MIRROR (click to rotate) or ROTATE_LEFT/RIGHT keys?
+        // Actually handleCellClick handles tool selection. 
+        // If we are here, the move is "committed" by firing.
+
+        // If originalOrientation is set, it was a ROTATION.
+        if (gameState.originalOrientation) {
+          // Check direction
+          action = 'ROTATE_RIGHT'; // approximation, or we need to check diff.
+          // Actually types.ts defines ROTATE_LEFT/RIGHT.
+          // let's just say 'ROTATE' or check current orientation vs original?
+          // For simplicity, let's use selectedTool if it makes sense, or default to generic.
+          if (selectedTool.startsWith('ROTATE')) action = selectedTool;
+          else action = 'ROTATE_RIGHT'; // default assumption for click-rotate
+        } else if (gameState.moveStartPos) {
+          action = 'MOVE'; // Should have been cleared though? 
+          // moveStartPos is cleared after move is done? No, it stays until fire? 
+          // logic: if successful move, moveStartPos stays validMoves cleared? 
+          // Let's look at useGameState: 
+          // After move: moveStartPos cleared NO. `newValidMoves = [prev.moveStartPos]`
+          // Wait, if move is done, activeCell is the *new* pos.
+          action = 'MOVE';
+        } else {
+          action = selectedTool; // Likely MIRROR, WALL, BOMB, DEFUSE, ERASER
+        }
+      }
+
+      const rec = captureMove(gameState, action);
+      setMoveHistory(prev => [...prev, rec]);
+    }
+
     playFireSound();
     fireLaser();
   };
@@ -182,13 +338,22 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4">
-      {/* Settings Button */}
       <button
         onClick={() => setIsSettingsOpen(true)}
         className="fixed top-4 left-4 z-50 p-3 bg-gray-900/80 border border-gray-700 text-gray-400 rounded-full hover:bg-gray-800 hover:text-white hover:border-gray-500 transition-all shadow-lg backdrop-blur-sm"
       >
         <SettingsIcon size={24} />
       </button>
+
+      {/* Log Viewer Button */}
+      {isTrainingMode && (
+        <button
+          onClick={() => setIsLogViewerOpen(true)}
+          className="fixed top-4 left-20 z-50 p-3 bg-gray-900/80 border border-gray-700 text-blue-400 rounded-full hover:bg-gray-800 hover:text-white hover:border-gray-500 transition-all shadow-lg backdrop-blur-sm"
+        >
+          <FileText size={24} />
+        </button>
+      )}
 
       <header className="mb-8 text-center">
         <h1 className="text-5xl font-bold mb-2 flex items-center justify-center gap-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
@@ -267,12 +432,23 @@ function App() {
             )}>
               {gameState.winner} WINS!
             </h2>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-            >
-              PLAY AGAIN
-            </button>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+              >
+                PLAY AGAIN
+              </button>
+              {isTrainingMode && moveHistory.length > 0 && (
+                <button
+                  onClick={() => setIsLogViewerOpen(true)}
+                  className="px-8 py-4 bg-blue-500 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center gap-2"
+                >
+                  <FileText size={24} />
+                  VIEW LOGS
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -283,6 +459,14 @@ function App() {
         onClose={() => setIsSettingsOpen(false)}
         onRestart={handleRestart}
         onQuit={handleQuit}
+        isTrainingMode={isTrainingMode}
+        setIsTrainingMode={setIsTrainingMode}
+      />
+      <LogViewerModal
+        isOpen={isLogViewerOpen}
+        onClose={() => setIsLogViewerOpen(false)}
+        moves={moveHistory}
+        onExport={downloadTrainingData}
       />
     </div>
   );
