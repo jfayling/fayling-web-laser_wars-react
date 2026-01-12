@@ -5,7 +5,13 @@
         "DRAW": -500,
         "MATERIAL_MIRROR": 10,
         "MATERIAL_BOMB": 2,
-        "THREAT_BOMB_NEAR_SOURCE": -5000
+        "THREAT_BOMB_NEAR_SOURCE": -5000,
+        "LASER_BLOCKED": -150,
+        "LASER_CLEAR_PATH": 100,
+        "LASER_NEAR_ENEMY": 200,
+        "CENTER_CONTROL": 50,
+        "MOBILITY_PER_CELL": 10,
+        "EDGE_PENALTY": -30
     },
     "depths": {
         "Easy": 1,

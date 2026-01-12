@@ -1,4 +1,5 @@
 import type { Cell, Direction, Player } from '../types';
+import { DebugState } from './debugState';
 
 export interface Point {
     x: number;
@@ -63,6 +64,10 @@ export const calculateLaserPath = (grid: Cell[][], firingPlayer: Player): LaserP
         else if (direction === 'LEFT') nextX--;
         else if (direction === 'RIGHT') nextX++;
 
+        if (firingPlayer === 'BLUE' && DebugState.enabled) {
+            console.log(`[AI-TRACE] Laser Step ${step}: ${currentX},${currentY} -> ${nextX},${nextY} (${direction})`);
+        }
+
         // 3. Check Bounds
         if (nextX < 0 || nextX >= BOARD_SIZE || nextY < 0 || nextY >= BOARD_SIZE) {
             // Hit Wall (boundary)
@@ -72,10 +77,17 @@ export const calculateLaserPath = (grid: Cell[][], firingPlayer: Player): LaserP
 
         // 4. Check Content
         const cell = grid[nextY][nextX];
+        if (DebugState.enabled && nextX === 1 && nextY === 0) {
+            console.log(`[AI-TRACE] checking 1,0. Content: ${cell.content}`);
+        }
         path.push({ x: nextX, y: nextY });
 
         currentX = nextX;
         currentY = nextY;
+
+        if (firingPlayer === 'BLUE' && nextX === 8 && nextY === 8 && DebugState.enabled) {
+            console.log(`[AI-TRACE] BLUE visiting 8,8. Content: ${cell.content}`);
+        }
 
         if (cell.content === 'BLOCK' || cell.content === 'WALL') {
             return { path, hit: false, hitType: 'WALL' };

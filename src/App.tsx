@@ -128,7 +128,7 @@ function App() {
     if (gameMode === 'PVE' && gameState.turn === 'RED' && !gameState.winner && !gameState.isFiring) {
       // AI Turn (Red)
       const timeout = setTimeout(() => {
-        const move = calculateAiMove(gameState.grid, 'RED', aiDifficulty);
+        const move = calculateAiMove(gameState.grid, 'RED', aiDifficulty, moveHistory);
         if (move) {
           // Apply Move
           playPlaceSound(); // AI placed something
@@ -248,7 +248,34 @@ function App() {
       }
     }
 
+    // Check if this is a terminal action that will end the turn immediately
+    let isTerminalAction = false;
+    if (selectedTool === 'DEFUSE') {
+      const opponent = gameState.turn === 'BLUE' ? 'RED' : 'BLUE';
+      if (cell.content === 'BOMB' && cell.owner === opponent) {
+        isTerminalAction = true;
+      }
+    } else if (selectedTool === 'BOMB') {
+      if (cell.owner !== null && cell.owner !== gameState.turn) {
+        if (cell.content === 'WALL' || cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B') {
+          isTerminalAction = true;
+        }
+      }
+    }
+
     handleCellClick(x, y);
+
+    // Record terminal actions immediately in training mode
+    if (isTrainingMode && isTerminalAction && gameState.turn === 'BLUE') {
+      setMoveHistory(prev => [...prev, {
+        turn: 'BLUE',
+        actionType: selectedTool,
+        x,
+        y,
+        timestamp: Date.now(),
+        details: 'TERMINAL_ACTION'
+      }]);
+    }
   };
 
   const onFireWrapper = () => {
