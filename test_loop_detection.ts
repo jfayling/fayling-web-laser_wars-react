@@ -1,77 +1,76 @@
 import { calculateAiMove } from './src/logic/aiLogic';
 import type { Cell, RecordedMove } from './src/types';
 
-// Create a test grid matching the user's reported scenario
+// Test case: Simulate the exact scenario from training data
+// BLUE places bomb at (8,9) three times, RED defuses twice, then on third time should defuse again
+
 const createTestGrid = (): Cell[][] => {
     const grid: Cell[][] = [];
     for (let y = 0; y < 10; y++) {
-        grid[y] = [];
+        const row: Cell[] = [];
         for (let x = 0; x < 10; x++) {
-            grid[y][x] = {
-                x,
-                y,
-                content: 'EMPTY',
-                owner: null
-            };
+            let content: any = 'EMPTY';
+            let owner: any = null;
+            let orientation: any = undefined;
+
+            // BLUE source at (0,0)
+            if (x === 0 && y === 0) {
+                content = 'SOURCE';
+                owner = 'BLUE';
+                orientation = 'RIGHT';
+            }
+            // RED source at (9,9)
+            else if (x === 9 && y === 9) {
+                content = 'SOURCE';
+                owner = 'RED';
+                orientation = 'LEFT';
+            }
+            // BLUE bomb at (8,9) - directly left of RED source
+            else if (x === 8 && y === 9) {
+                content = 'BOMB';
+                owner = 'BLUE';
+            }
+
+            row.push({ x, y, content, owner, orientation });
         }
+        grid.push(row);
     }
-
-    // Set up sources
-    grid[0][0].content = 'SOURCE';
-    grid[0][0].owner = 'BLUE';
-    grid[0][0].orientation = 'RIGHT';
-
-    grid[9][9].content = 'SOURCE';
-    grid[9][9].owner = 'RED';
-    grid[9][9].orientation = 'LEFT';
-
-    // Add the mirror that was placed in the game
-    grid[0][8].content = 'MIRROR_B';
-    grid[0][8].owner = 'BLUE';
-
     return grid;
 };
 
-// Simulate the move history from the user's bug report
-const createMoveHistory = (): RecordedMove[] => {
-    return [
-        { turn: 'BLUE', actionType: 'MIRROR', x: 8, y: 0, details: 'MIRROR_B', timestamp: 1768252741422 },
-        { turn: 'RED', actionType: 'BOMB', x: 1, y: 0, timestamp: 1768252744737 },
-        { turn: 'BLUE', actionType: 'DEFUSE', x: 1, y: 0, timestamp: 1768252749406, details: 'TERMINAL_ACTION' },
-        { turn: 'RED', actionType: 'BOMB', x: 1, y: 0, timestamp: 1768252750683 },
-        { turn: 'BLUE', actionType: 'DEFUSE', x: 1, y: 0, timestamp: 1768252755326, details: 'TERMINAL_ACTION' },
-        { turn: 'RED', actionType: 'BOMB', x: 1, y: 0, timestamp: 1768252756597 },
-        { turn: 'BLUE', actionType: 'DEFUSE', x: 1, y: 0, timestamp: 1768252761758, details: 'TERMINAL_ACTION' },
-        { turn: 'RED', actionType: 'BOMB', x: 1, y: 0, timestamp: 1768252763015 }
-    ];
-};
+// Simulate move history: BLUE bombs, RED defuses, BLUE bombs, RED defuses
+const moveHistory: RecordedMove[] = [
+    { turn: 'BLUE', actionType: 'BOMB', x: 8, y: 9, details: 'BOMB', timestamp: 1 },
+    { turn: 'RED', actionType: 'DEFUSE', x: 8, y: 9, details: 'TERMINAL_ACTION', timestamp: 2 },
+    { turn: 'BLUE', actionType: 'BOMB', x: 8, y: 9, details: 'BOMB', timestamp: 3 },
+    { turn: 'RED', actionType: 'DEFUSE', x: 8, y: 9, details: 'TERMINAL_ACTION', timestamp: 4 },
+    { turn: 'BLUE', actionType: 'BOMB', x: 8, y: 9, details: 'BOMB', timestamp: 5 },
+];
 
-console.log('=== AI BOMB Loop Detection Test ===\n');
+console.log('=== Testing AI Loop Detection Fix ===');
+console.log('Scenario: BLUE placed bomb at (8,9) three times, RED defused twice');
+console.log('Move history shows RED defused at (8,9) twice already');
+console.log('Expected: RED should STILL defuse (not place a mirror) because bomb is adjacent to source');
+console.log('');
 
-const grid = createTestGrid();
-const moveHistory = createMoveHistory();
+const testGrid = createTestGrid();
+const aiMove = calculateAiMove(testGrid, 'RED', 'Hard', moveHistory);
 
-console.log('Testing scenario where RED (AI) has placed BOMB at (1,0) multiple times...');
-console.log(`Move history length: ${moveHistory.length}`);
-console.log('Last 8 moves:');
-moveHistory.slice(-8).forEach(m => {
-    console.log(`  ${m.turn}: ${m.actionType} at (${m.x},${m.y})`);
-});
-
-console.log('\nCalling AI (RED) with move history...');
-const aiMove = calculateAiMove(grid, 'RED', 'Hard', moveHistory);
-
-console.log('\n=== Result ===');
+console.log('');
+console.log('=== AI Decision ===');
 if (aiMove) {
-    console.log(`AI chose: ${aiMove.tool} at (${aiMove.x},${aiMove.y})`);
+    console.log(`AI chose: ${aiMove.tool} at (${aiMove.x}, ${aiMove.y})`);
 
-    if (aiMove.tool === 'BOMB' && aiMove.x === 1 && aiMove.y === 0) {
-        console.log('❌ TEST FAILED: AI is still stuck in the BOMB loop!');
-        console.log('   The AI should NOT place a bomb at (1,0) again.');
+    if (aiMove.tool === 'DEFUSE' && aiMove.x === 8 && aiMove.y === 9) {
+        console.log('✓ SUCCESS: AI chose to defuse despite loop detection!');
+        console.log('✓ The fix is working - critical defensive actions override loop detection');
+    } else if (aiMove.tool === 'MIRROR' || aiMove.tool === 'WALL' || aiMove.tool === 'BOMB') {
+        console.log('✗ FAILURE: AI placed an object instead of defusing');
+        console.log('✗ This could lead to self-damage');
     } else {
-        console.log('✅ TEST PASSED: AI broke out of the loop!');
-        console.log('   The AI chose a different move instead of repeating BOMB at (1,0).');
+        console.log(`? AI chose ${aiMove.tool} - verify this is safe`);
     }
 } else {
-    console.log('⚠️  AI returned no move');
+    console.log('AI returned no move (will just fire laser)');
+    console.log('✗ FAILURE: AI should defuse the bomb');
 }

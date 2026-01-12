@@ -31,19 +31,49 @@ export const calculateAiMove = (grid: Cell[][], aiPlayer: Player, difficulty: 'E
     return findBestMoveAlphaBeta(rootState, maxDepth, aiPlayer, moveHistory);
 };
 
-// --- Loop Detection ---
-
 /**
  * Detects if the AI is stuck in an action loop at a specific location.
  * Returns true if the AI has performed the same action at the same location 2+ times recently
  * with the opponent performing a counter-action in between.
  * 
+ * EXCEPTION: DEFUSE actions are allowed to repeat if the bomb is adjacent to the AI's source,
+ * as this represents a critical defensive action that should override loop detection.
+ * 
  * Examples:
  * - AI places BOMB at (x,y), opponent DEFUSES, AI places BOMB again at (x,y) = loop
- * - AI DEFUSES at (x,y), opponent places BOMB, AI DEFUSES again at (x,y) = loop
+ * - AI DEFUSES at (x,y), opponent places BOMB, AI DEFUSES again at (x,y) = loop (unless critical threat)
  */
-const detectActionLoop = (moveHistory: RecordedMove[], aiPlayer: Player, actionType: ToolType | 'PASS', x: number, y: number): boolean => {
+const detectActionLoop = (moveHistory: RecordedMove[], aiPlayer: Player, actionType: ToolType | 'PASS', x: number, y: number, grid?: Cell[][]): boolean => {
     if (moveHistory.length < 4) return false; // Need at least 4 moves to detect a loop
+
+    // Special handling for DEFUSE: allow if it's a critical defensive action
+    if (actionType === 'DEFUSE' && grid) {
+        // Check if the bomb at (x,y) is adjacent to the AI's source
+        const boardSize = grid.length;
+        let sourceX = -1;
+        let sourceY = -1;
+
+        // Find AI's source
+        for (let y = 0; y < boardSize; y++) {
+            for (let x = 0; x < boardSize; x++) {
+                if (grid[y][x].content === 'SOURCE' && grid[y][x].owner === aiPlayer) {
+                    sourceX = x;
+                    sourceY = y;
+                    break;
+                }
+            }
+            if (sourceX !== -1) break;
+        }
+
+        // If bomb is adjacent to source (within 1 cell), allow repeated defuse
+        if (sourceX !== -1) {
+            const distance = Math.max(Math.abs(x - sourceX), Math.abs(y - sourceY));
+            if (distance <= 1) {
+                console.log(`[AI-LOOP-DETECTION] DEFUSE at (${x},${y}) is adjacent to source at (${sourceX},${sourceY}). Allowing repeated defuse.`);
+                return false; // Not a loop - it's a critical defensive action
+            }
+        }
+    }
 
     // Look at the last 8 moves (4 turns worth)
     const recentMoves = moveHistory.slice(-8);
@@ -121,7 +151,7 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
         const defuseMove = moves.find(m => m.tool === 'DEFUSE');
         if (defuseMove) {
             // Check if this would create a loop
-            const wouldLoop = detectActionLoop(moveHistory, aiPlayer, 'DEFUSE', defuseMove.x, defuseMove.y);
+            const wouldLoop = detectActionLoop(moveHistory, aiPlayer, 'DEFUSE', defuseMove.x, defuseMove.y, rootState.grid);
             if (!wouldLoop) {
                 console.log(`[AI-PANIC] Threat detected! Defusing at (${defuseMove.x},${defuseMove.y})`);
                 return defuseMove;
@@ -134,7 +164,7 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
 
     // Filter out any moves that would create a loop from bestMoves
     const filteredBestMoves = bestMoves.filter(move => {
-        const wouldLoop = detectActionLoop(moveHistory, aiPlayer, move.tool, move.x, move.y);
+        const wouldLoop = detectActionLoop(moveHistory, aiPlayer, move.tool, move.x, move.y, rootState.grid);
         if (wouldLoop) {
             console.log(`[AI-FILTER] Removing looping ${move.tool} at (${move.x},${move.y}) from best moves`);
             return false;
@@ -150,7 +180,7 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
     if (filteredBestMoves.length === 0) {
         console.log(`[AI-FILTER] All best moves were loops! Selecting from all non-looping moves instead.`);
         finalMoves = moves.filter(move => {
-            const wouldLoop = detectActionLoop(moveHistory, aiPlayer, move.tool, move.x, move.y);
+            const wouldLoop = detectActionLoop(moveHistory, aiPlayer, move.tool, move.x, move.y, rootState.grid);
             return !wouldLoop;
         });
     }
