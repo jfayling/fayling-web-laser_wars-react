@@ -1,21 +1,24 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Upload, X, Zap, FileText } from 'lucide-react';
 import { Board } from './Board';
 import { PlaybackControls } from './PlaybackControls';
 import { JsonViewerModal } from './JsonViewerModal';
 import { usePlaybackState } from '../hooks/usePlaybackState';
+import type { GameSession } from '../types';
 
 interface PlaybackScreenProps {
     onExit: () => void;
+    initialSession?: GameSession;
 }
 
-export const PlaybackScreen: React.FC<PlaybackScreenProps> = ({ onExit }) => {
+export const PlaybackScreen: React.FC<PlaybackScreenProps> = ({ onExit, initialSession }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isJsonViewerOpen, setIsJsonViewerOpen] = useState(false);
     const {
         playbackState,
         error,
         loadTrainingFile,
+        loadSessionData,
         stepForward,
         stepBackward,
         jumpToStart,
@@ -25,6 +28,13 @@ export const PlaybackScreen: React.FC<PlaybackScreenProps> = ({ onExit }) => {
         canStepBackward,
         totalMoves
     } = usePlaybackState();
+
+    // Load initial session if provided
+    useEffect(() => {
+        if (initialSession) {
+            loadSessionData(initialSession);
+        }
+    }, [initialSession, loadSessionData]);
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];

@@ -68,6 +68,33 @@ export const usePlaybackState = () => {
     }, []);
 
     /**
+     * Load session data directly (without file upload)
+     */
+    const loadSessionData = useCallback((session: GameSession) => {
+        try {
+            const validatedSession = validateTrainingFile(session);
+
+            setPlaybackState({
+                session: validatedSession,
+                currentMoveIndex: -1,
+                gameState: {
+                    grid: createInitialGrid(),
+                    turn: 'BLUE',
+                    isFiring: false,
+                    winner: null,
+                    laserPath: [],
+                    activeCell: null
+                },
+                isPlaying: false,
+                playbackSpeed: 1000
+            });
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load session data');
+        }
+    }, []);
+
+    /**
      * Step forward one move
      */
     const stepForward = useCallback(() => {
@@ -216,6 +243,7 @@ export const usePlaybackState = () => {
         playbackState,
         error,
         loadTrainingFile,
+        loadSessionData,
         stepForward,
         stepBackward,
         jumpToMove,

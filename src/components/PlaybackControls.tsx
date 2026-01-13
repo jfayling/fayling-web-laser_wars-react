@@ -39,10 +39,10 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
             {/* Move Counter */}
             <div className="text-center">
                 <div className="text-2xl font-bold text-white">
-                    Move {currentMoveIndex + 1} / {totalMoves}
+                    Move {currentMove ? currentMove.moveIndex + 1 : currentMoveIndex + 1} / {totalMoves}
                 </div>
                 <div className="text-sm text-gray-400 mt-1">
-                    {currentMoveIndex === -1 ? 'Initial State' : `Viewing move ${currentMoveIndex + 1}`}
+                    {currentMoveIndex === -1 ? 'Initial State' : `Viewing move ${currentMove ? currentMove.moveIndex + 1 : currentMoveIndex + 1}`}
                 </div>
             </div>
 

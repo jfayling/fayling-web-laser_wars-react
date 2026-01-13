@@ -34,6 +34,7 @@ function App() {
   });
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
   const [moveHistory, setMoveHistory] = useState<RecordedMove[]>([]);
+  const [playbackSession, setPlaybackSession] = useState<GameSession | null>(null);
 
   const captureMove = (currentGameState: import('./types').GameState, actionType: import('./types').ToolType | 'PASS' = 'PASS'): RecordedMove => {
     // If we have an active cell, that's where the action happened. 
@@ -64,6 +65,7 @@ function App() {
     }
 
     return {
+      moveIndex: moveHistory.length,
       turn: currentGameState.turn,
       actionType,
       x,
@@ -132,6 +134,13 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handlePlayback = () => {
+    const session = generateSessionData();
+    setPlaybackSession(session);
+    setIsLogViewerOpen(false);
+    setGameMode('PLAYBACK');
+  };
+
   // AI Logic
   useEffect(() => {
     if (gameMode === 'PVE' && gameState.turn === 'RED' && !gameState.winner && !gameState.isFiring) {
@@ -188,6 +197,7 @@ function App() {
           // Record AI Move Immediately (before async delay/state updates)
           if (isTrainingMode) {
             setMoveHistory(prev => [...prev, {
+              moveIndex: prev.length,
               turn: 'RED',
               actionType: move.tool,
               x: move.x,
@@ -214,6 +224,7 @@ function App() {
           // No move? Just fire.
           if (isTrainingMode) {
             setMoveHistory(prev => [...prev, {
+              moveIndex: prev.length,
               turn: 'RED',
               actionType: 'PASS',
               x: -1,
@@ -278,6 +289,7 @@ function App() {
     // Record terminal actions immediately in training mode
     if (isTrainingMode && isTerminalAction && gameState.turn === 'BLUE') {
       setMoveHistory(prev => [...prev, {
+        moveIndex: prev.length,
         turn: 'BLUE',
         actionType: selectedTool,
         x,
@@ -341,7 +353,7 @@ function App() {
   }
 
   if (gameMode === 'PLAYBACK') {
-    return <PlaybackScreen onExit={() => setGameMode(null)} />;
+    return <PlaybackScreen onExit={() => { setGameMode(null); setPlaybackSession(null); }} initialSession={playbackSession || undefined} />;
   }
 
   /* New handler for tool selection */
@@ -536,6 +548,7 @@ function App() {
         moves={moveHistory}
         sessionData={generateSessionData()}
         onExport={downloadTrainingData}
+        onPlayback={handlePlayback}
       />
     </div>
   );

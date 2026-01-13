@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, FileText, Download, Eye } from 'lucide-react';
+import { X, FileText, Download, Eye, Play } from 'lucide-react';
 import type { RecordedMove, GameSession } from '../types';
 import { JsonViewerModal } from './JsonViewerModal';
 
@@ -9,10 +9,11 @@ interface LogViewerModalProps {
     moves: RecordedMove[];
     sessionData: GameSession;
     onExport?: () => void;
+    onPlayback?: () => void;
 }
 
 
-export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose, moves, sessionData, onExport }) => {
+export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose, moves, sessionData, onExport, onPlayback }) => {
     const [isJsonViewerOpen, setIsJsonViewerOpen] = useState(false);
 
     if (!isOpen) return null;
@@ -61,7 +62,7 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose,
                                 ) : (
                                     moves.map((move, i) => (
                                         <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors">
-                                            <td className="p-3 text-gray-600">{i + 1}</td>
+                                            <td className="p-3 text-gray-600">{move.moveIndex + 1}</td>
                                             <td className={`p-3 font-bold ${move.turn === 'BLUE' ? 'text-blue-400' : 'text-red-400'}`}>
                                                 {move.turn}
                                             </td>
@@ -107,6 +108,15 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose,
                                 <Eye size={16} />
                                 View JSON
                             </button>
+                            {onPlayback && (
+                                <button
+                                    onClick={onPlayback}
+                                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-colors uppercase tracking-wider text-xs shadow-lg shadow-blue-900/20"
+                                >
+                                    <Play size={16} />
+                                    Playback
+                                </button>
+                            )}
                         </div>
                         <button
                             onClick={onClose}
