@@ -3,6 +3,9 @@ import { calculateLaserPath } from './laserLogic';
 import AI_CONFIG from './aiConfig.json';
 import { DebugState } from './debugState';
 
+// AI Engine Version - increment this whenever AI logic changes
+export const AI_ENGINE_VERSION = '1.0.0';
+
 export interface AiMove {
     x: number;
     y: number;

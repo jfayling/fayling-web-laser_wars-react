@@ -43,10 +43,39 @@ export interface RecordedMove {
     timestamp: number;
 }
 
+export type PlayerType = 'HUMAN' | 'AI';
+
+export interface AIConfiguration {
+    version: string;
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    scores: {
+        WIN: number;
+        LOSS: number;
+        DRAW: number;
+        MATERIAL_MIRROR: number;
+        MATERIAL_BOMB: number;
+        THREAT_BOMB_NEAR_SOURCE: number;
+        LASER_BLOCKED: number;
+        LASER_CLEAR_PATH: number;
+        LASER_NEAR_ENEMY: number;
+        CENTER_CONTROL: number;
+        MOBILITY_PER_CELL: number;
+        EDGE_PENALTY: number;
+    };
+    depths: {
+        Easy: number;
+        Medium: number;
+        Hard: number;
+    };
+}
+
 export interface GameSession {
     date: string;
     winner: Player | null;
     winReason?: WinReason | null;
     moves: RecordedMove[];
     mode: 'PVP' | 'PVE';
+    playerBlue: PlayerType;
+    playerRed: PlayerType;
+    aiConfig?: AIConfiguration; // Only present when AI is playing
 }

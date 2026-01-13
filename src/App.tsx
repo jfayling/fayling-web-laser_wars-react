@@ -13,7 +13,9 @@ import { useSettings } from './contexts/SettingsContext';
 import { SettingsModal } from './components/SettingsModal';
 import { LogViewerModal } from './components/LogViewerModal';
 import { FileText } from 'lucide-react';
-import type { RecordedMove, GameSession } from './types';
+import type { RecordedMove, GameSession, AIConfiguration } from './types';
+import { AI_ENGINE_VERSION } from './logic/aiLogic';
+import AI_CONFIG from './logic/aiConfig.json';
 
 export type GameMode = 'PVP' | 'PVE' | null;
 
@@ -89,12 +91,29 @@ function App() {
   };
 
   const generateSessionData = (): GameSession => {
+    const isPVE = gameMode === 'PVE';
+
+    // Determine player types based on game mode
+    const playerBlue = 'HUMAN';
+    const playerRed = isPVE ? 'AI' : 'HUMAN';
+
+    // Build AI configuration if AI is playing
+    const aiConfig: AIConfiguration | undefined = isPVE ? {
+      version: AI_ENGINE_VERSION,
+      difficulty: aiDifficulty,
+      scores: AI_CONFIG.scores as AIConfiguration['scores'],
+      depths: AI_CONFIG.depths as AIConfiguration['depths']
+    } : undefined;
+
     return {
       date: new Date().toISOString(),
       mode: gameMode || 'PVP',
       winner: gameState.winner,
       winReason: gameState.winReason,
-      moves: moveHistory
+      moves: moveHistory,
+      playerBlue,
+      playerRed,
+      aiConfig
     };
   };
 
