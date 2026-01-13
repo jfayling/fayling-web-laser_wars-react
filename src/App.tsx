@@ -131,17 +131,6 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
-  const copyTrainingData = async () => {
-    if (moveHistory.length === 0) return;
-    const session = generateSessionData();
-    try {
-      await navigator.clipboard.writeText(JSON.stringify(session, null, 2));
-      // Could show a toast here, but for now silent success is okay or we rely on modal feedback if implemented
-    } catch (err) {
-      console.error('Failed to copy: ', err);
-    }
-  };
-
   // AI Logic
   useEffect(() => {
     if (gameMode === 'PVE' && gameState.turn === 'RED' && !gameState.winner && !gameState.isFiring) {
@@ -540,8 +529,8 @@ function App() {
         isOpen={isLogViewerOpen}
         onClose={() => setIsLogViewerOpen(false)}
         moves={moveHistory}
+        sessionData={generateSessionData()}
         onExport={downloadTrainingData}
-        onCopy={copyTrainingData}
       />
     </div>
   );
