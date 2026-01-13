@@ -34,6 +34,32 @@ export interface GameState {
 
 export type ToolType = 'MIRROR' | 'WALL' | 'BOMB' | 'ERASER' | 'DEFUSE' | 'MOVE' | 'ROTATE_LEFT' | 'ROTATE_RIGHT';
 
+export interface AIAlternativeMove {
+    x: number;
+    y: number;
+    tool: ToolType;
+    score: number;
+    details?: string;
+}
+
+export interface AIEvaluationBreakdown {
+    materialScore: number;
+    laserPathScore: number;
+    positionScore: number;
+    threatScore: number;
+    totalScore: number;
+}
+
+export interface AIDecisionReason {
+    chosenMoveScore: number;
+    alternativeMoves: AIAlternativeMove[]; // Top 5 alternatives
+    evaluationBreakdown: AIEvaluationBreakdown;
+    loopDetected: boolean;
+    panicMode: boolean;
+    searchDepth: number;
+    totalMovesConsidered: number;
+}
+
 export interface RecordedMove {
     turn: Player;
     actionType: ToolType | 'PASS'; // PASS if they just fired without doing anything
@@ -41,6 +67,7 @@ export interface RecordedMove {
     y: number; // -1 if not applicable
     details?: string; // e.g. "ROTATED_UP_TO_RIGHT" or specific mirror placed
     timestamp: number;
+    aiReasoning?: AIDecisionReason; // Only present for AI moves
 }
 
 export type PlayerType = 'HUMAN' | 'AI';

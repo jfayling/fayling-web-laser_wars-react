@@ -7,9 +7,12 @@ interface CellProps {
     cell: CellType;
     isValidMove?: boolean;
     onClick: () => void;
+    isTrainingMode?: boolean;
+    x?: number;
+    y?: number;
 }
 
-export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove }) => {
+export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove, isTrainingMode, x, y }) => {
     const isRed = cell.owner === 'RED';
     const isBlue = cell.owner === 'BLUE';
 
@@ -17,7 +20,7 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove }) => {
         <div
             onClick={onClick}
             className={clsx(
-                "w-full h-full border border-gray-800 flex items-center justify-center cursor-pointer transition-colors duration-200",
+                "w-full h-full border border-gray-800 flex items-center justify-center cursor-pointer transition-colors duration-200 relative",
                 "hover:bg-gray-800/50",
                 {
                     "bg-red-900/20 border-red-800/50": isRed,
@@ -26,6 +29,12 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove }) => {
                 }
             )}
         >
+            {/* Grid coordinates in training mode */}
+            {isTrainingMode && x !== undefined && y !== undefined && (
+                <div className="absolute top-0.5 left-0.5 text-[8px] font-mono text-gray-500 leading-none pointer-events-none z-10">
+                    {x},{y}
+                </div>
+            )}
             {cell.content === 'MIRROR_A' && (
                 // / Mirror (Bottom-Left to Top-Right)
                 <div className="relative w-full h-full flex items-center justify-center">

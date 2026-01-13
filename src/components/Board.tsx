@@ -6,9 +6,10 @@ import { LaserOverlay } from './LaserOverlay';
 interface BoardProps {
     gameState: GameState;
     onCellClick: (x: number, y: number) => void;
+    isTrainingMode?: boolean;
 }
 
-export const Board: React.FC<BoardProps> = ({ gameState, onCellClick }) => {
+export const Board: React.FC<BoardProps> = ({ gameState, onCellClick, isTrainingMode }) => {
     return (
         <div className="relative p-4 bg-gray-900 rounded-xl shadow-2xl border border-gray-700">
             <div
@@ -29,6 +30,9 @@ export const Board: React.FC<BoardProps> = ({ gameState, onCellClick }) => {
                                 cell={cell}
                                 onClick={() => onCellClick(x, y)}
                                 isValidMove={isValidMove}
+                                isTrainingMode={isTrainingMode}
+                                x={x}
+                                y={y}
                             />
                         );
                     })

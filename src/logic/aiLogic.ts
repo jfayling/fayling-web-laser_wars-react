@@ -4,7 +4,7 @@ import AI_CONFIG from './aiConfig.json';
 import { DebugState } from './debugState';
 
 // AI Engine Version - increment this whenever AI logic changes
-export const AI_ENGINE_VERSION = '1.0.0';
+export const AI_ENGINE_VERSION = '1.1.0';
 
 export interface AiMove {
     x: number;
@@ -12,6 +12,7 @@ export interface AiMove {
     tool: ToolType;
     score?: number;
     details?: string;
+    reasoning?: import('../types').AIDecisionReason;
 }
 
 interface AIState {
@@ -110,6 +111,9 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
     let beta = Infinity;
     let maxVal = -Infinity;
 
+    // Track all moves with their scores for reasoning
+    const allMovesWithScores: Array<{ move: AiMove; score: number }> = [];
+
     for (const move of moves) {
         if (rootState.grid[0][1].content !== 'EMPTY' && rootState.grid[0][1].content !== undefined) {
             console.log(`[AI-TRACE] CRITICAL: rootState polluted at (1,0)! Content: ${rootState.grid[0][1].content}`);
@@ -122,6 +126,9 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
 
         const nextState = applyMoveAndResolve(rootState, move);
         const val = alphaBeta(nextState, maxDepth - 1, alpha, beta, false, aiPlayer);
+
+        // Store move with score
+        allMovesWithScores.push({ move, score: val });
 
         if (DebugState.enabled && move.x === 3 && move.y === 9) {
             DebugState.enabled = false;
@@ -149,6 +156,7 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
     const rootScore = evaluateHeuristic(rootState, aiPlayer);
     const isThreatened = rootScore <= -2000; // Threshold for THREAT_BOMB_NEAR_SOURCE
     const isWinning = maxVal >= AI_CONFIG.scores.WIN - 1000;
+    let panicMode = false;
 
     if (isThreatened && !isWinning) {
         const defuseMove = moves.find(m => m.tool === 'DEFUSE');
@@ -157,6 +165,31 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
             const wouldLoop = detectActionLoop(moveHistory, aiPlayer, 'DEFUSE', defuseMove.x, defuseMove.y, rootState.grid);
             if (!wouldLoop) {
                 console.log(`[AI-PANIC] Threat detected! Defusing at (${defuseMove.x},${defuseMove.y})`);
+                panicMode = true;
+
+                // Build reasoning for panic mode defuse
+                const evaluationBreakdown = getEvaluationBreakdown(rootState, aiPlayer);
+                const topAlternatives = allMovesWithScores
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 5)
+                    .map(({ move, score }) => ({
+                        x: move.x,
+                        y: move.y,
+                        tool: move.tool,
+                        score,
+                        details: move.details
+                    }));
+
+                defuseMove.reasoning = {
+                    chosenMoveScore: maxVal,
+                    alternativeMoves: topAlternatives,
+                    evaluationBreakdown,
+                    loopDetected: false,
+                    panicMode: true,
+                    searchDepth: maxDepth,
+                    totalMovesConsidered: moves.length
+                };
+
                 return defuseMove;
             } else {
                 console.log(`[AI-PANIC] Loop detected! Skipping DEFUSE at (${defuseMove.x},${defuseMove.y}), using alpha-beta result instead.`);
@@ -180,8 +213,11 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
     // If we filtered out all best moves (they were all looping moves)
     // Select from ALL available moves, excluding the looping ones
     let finalMoves = filteredBestMoves;
+    let loopDetected = false;
+
     if (filteredBestMoves.length === 0) {
         console.log(`[AI-FILTER] All best moves were loops! Selecting from all non-looping moves instead.`);
+        loopDetected = true;
         finalMoves = moves.filter(move => {
             const wouldLoop = detectActionLoop(moveHistory, aiPlayer, move.tool, move.x, move.y, rootState.grid);
             return !wouldLoop;
@@ -195,6 +231,30 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
     if (finalMoves.length === 0) return null;
     const selectedMove = finalMoves[Math.floor(Math.random() * finalMoves.length)];
     console.log(`[AI-FILTER] Final selection: ${selectedMove.tool} at (${selectedMove.x},${selectedMove.y})`);
+
+    // Build reasoning for the selected move
+    const evaluationBreakdown = getEvaluationBreakdown(rootState, aiPlayer);
+    const topAlternatives = allMovesWithScores
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .map(({ move, score }) => ({
+            x: move.x,
+            y: move.y,
+            tool: move.tool,
+            score,
+            details: move.details
+        }));
+
+    selectedMove.reasoning = {
+        chosenMoveScore: maxVal,
+        alternativeMoves: topAlternatives,
+        evaluationBreakdown,
+        loopDetected,
+        panicMode,
+        searchDepth: maxDepth,
+        totalMovesConsidered: moves.length
+    };
+
     return selectedMove;
 };
 
@@ -442,13 +502,22 @@ const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
         console.log(`[AI-TRACE] MUTATION DETECTED! (1,0) changed to ${nextGrid[0][1].content}. Move: ${move.tool}(${move.x},${move.y})`);
     }
 
-    const { hit, hitType, path } = calculateLaserPath(nextGrid, player);
+    // CRITICAL FIX: Check BOTH players' laser paths after the move
+    // This ensures we detect when the opponent creates a configuration that causes
+    // the AI's laser to hit its own source or other critical scenarios
 
-    if (hit) {
-        if (hitType === 'BOMB') {
-            const bombPos = path[path.length - 1];
-            applyBlast(nextGrid, bombPos.x, bombPos.y);
-        }
+    // Check current player's laser
+    const { hit, hitType, path } = calculateLaserPath(nextGrid, player);
+    if (hit && hitType === 'BOMB') {
+        const bombPos = path[path.length - 1];
+        applyBlast(nextGrid, bombPos.x, bombPos.y);
+    }
+
+    // Check opponent's laser (this was missing!)
+    const opponentLaser = calculateLaserPath(nextGrid, opponent);
+    if (opponentLaser.hit && opponentLaser.hitType === 'BOMB') {
+        const bombPos = opponentLaser.path[opponentLaser.path.length - 1];
+        applyBlast(nextGrid, bombPos.x, bombPos.y);
     }
 
     return {
@@ -623,7 +692,89 @@ const evaluatePosition = (grid: Cell[][], player: Player): number => {
     return score;
 };
 
+const getEvaluationBreakdown = (state: AIState, rootPlayer: Player): import('../types').AIEvaluationBreakdown => {
+    const { grid } = state;
+    const boardSize = grid.length;
+
+    let materialScore = 0;
+    let threatScore = 0;
+
+    // Calculate material score
+    for (let y = 0; y < boardSize; y++) {
+        for (let x = 0; x < boardSize; x++) {
+            const cell = grid[y][x];
+            if (cell.content === 'EMPTY') continue;
+
+            const isMe = cell.owner === rootPlayer;
+            const value = isMe ? 1 : -1;
+
+            if (cell.content === 'MIRROR_A' || cell.content === 'MIRROR_B') {
+                materialScore += (AI_CONFIG.scores.MATERIAL_MIRROR * value);
+            } else if (cell.content === 'BOMB') {
+                materialScore += (AI_CONFIG.scores.MATERIAL_BOMB * value);
+            }
+        }
+    }
+
+    // Count AI's bombs and apply spam penalty
+    let myBombCount = 0;
+    for (let y = 0; y < boardSize; y++) {
+        for (let x = 0; x < boardSize; x++) {
+            const cell = grid[y][x];
+            if (cell.content === 'BOMB' && cell.owner === rootPlayer) {
+                myBombCount++;
+            }
+        }
+    }
+
+    if (myBombCount >= 3) {
+        const excessBombs = myBombCount - 2;
+        materialScore += AI_CONFIG.scores.BOMB_SPAM_PENALTY * excessBombs;
+    }
+
+    // Calculate threat score
+    let mySourcePos = { x: -1, y: -1 };
+    for (let y = 0; y < boardSize; y++) {
+        for (let x = 0; x < boardSize; x++) {
+            const c = grid[y][x];
+            if (c.content === 'SOURCE' && c.owner === rootPlayer) {
+                mySourcePos = { x, y };
+                break;
+            }
+        }
+        if (mySourcePos.x !== -1) break;
+    }
+
+    if (mySourcePos.x !== -1) {
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                const nx = mySourcePos.x + dx;
+                const ny = mySourcePos.y + dy;
+                if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+                    const c = grid[ny][nx];
+                    if (c.content === 'BOMB' && c.owner !== rootPlayer) {
+                        threatScore += AI_CONFIG.scores.THREAT_BOMB_NEAR_SOURCE;
+                    }
+                }
+            }
+        }
+    }
+
+    const laserPathScore = evaluateLaserPath(grid, rootPlayer);
+    const positionScore = evaluatePosition(grid, rootPlayer);
+    const totalScore = materialScore + threatScore + laserPathScore + positionScore;
+
+    return {
+        materialScore,
+        laserPathScore,
+        positionScore,
+        threatScore,
+        totalScore
+    };
+};
+
 const evaluateHeuristic = (state: AIState, rootPlayer: Player): number => {
+
     let score = 0;
     const { grid } = state;
     const boardSize = grid.length;
@@ -643,6 +794,24 @@ const evaluateHeuristic = (state: AIState, rootPlayer: Player): number => {
             }
         }
     }
+
+    // Count AI's bombs and apply spam penalty
+    let myBombCount = 0;
+    for (let y = 0; y < boardSize; y++) {
+        for (let x = 0; x < boardSize; x++) {
+            const cell = grid[y][x];
+            if (cell.content === 'BOMB' && cell.owner === rootPlayer) {
+                myBombCount++;
+            }
+        }
+    }
+
+    // Apply escalating penalty for having too many bombs (3+)
+    if (myBombCount >= 3) {
+        const excessBombs = myBombCount - 2; // Allow 2 bombs without penalty
+        score += AI_CONFIG.scores.BOMB_SPAM_PENALTY * excessBombs;
+    }
+
 
     let mySourcePos = { x: -1, y: -1 };
 

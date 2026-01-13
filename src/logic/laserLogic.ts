@@ -101,17 +101,19 @@ export const calculateLaserPath = (grid: Cell[][], firingPlayer: Player): LaserP
                 return { path, hit: true, hitType: 'SELF' }; // LOSE (Friendly Fire)
             }
         } else if (cell.content === 'MIRROR_A') {
-            // / Mirror
-            if (direction === 'RIGHT') direction = 'UP';
-            else if (direction === 'LEFT') direction = 'DOWN';
-            else if (direction === 'UP') direction = 'RIGHT';
-            else if (direction === 'DOWN') direction = 'LEFT';
+            // / Mirror - reflects like a physical / mirror
+            // Horizontal beams become vertical, vertical beams become horizontal
+            if (direction === 'RIGHT') direction = 'DOWN';    // west-to-east becomes north-to-south
+            else if (direction === 'LEFT') direction = 'UP';   // east-to-west becomes south-to-north
+            else if (direction === 'UP') direction = 'LEFT';   // south-to-north becomes east-to-west
+            else if (direction === 'DOWN') direction = 'RIGHT'; // north-to-south becomes west-to-east
         } else if (cell.content === 'MIRROR_B') {
-            // \ Mirror
-            if (direction === 'RIGHT') direction = 'DOWN';
-            else if (direction === 'LEFT') direction = 'UP';
-            else if (direction === 'UP') direction = 'LEFT';
-            else if (direction === 'DOWN') direction = 'RIGHT';
+            // \ Mirror - reflects like a physical \ mirror
+            // Horizontal beams become vertical (opposite of /), vertical beams become horizontal
+            if (direction === 'RIGHT') direction = 'UP';      // west-to-east becomes south-to-north
+            else if (direction === 'LEFT') direction = 'DOWN'; // east-to-west becomes north-to-south
+            else if (direction === 'UP') direction = 'RIGHT';  // south-to-north becomes west-to-east
+            else if (direction === 'DOWN') direction = 'LEFT'; // north-to-south becomes east-to-west
         }
         // EMPTY passes through
     }

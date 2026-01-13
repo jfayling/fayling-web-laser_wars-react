@@ -203,7 +203,8 @@ function App() {
               x: move.x,
               y: move.y,
               timestamp: Date.now(),
-              details: move.tool === 'MOVE' ? 'AI_MOVE' : (isTerminal ? 'TERMINAL_ACTION' : undefined)
+              details: move.tool === 'MOVE' ? 'AI_MOVE' : (isTerminal ? 'TERMINAL_ACTION' : undefined),
+              aiReasoning: move.reasoning
             }]);
           }
 
@@ -461,7 +462,7 @@ function App() {
           )}
         </div>
 
-        <Board gameState={gameState} onCellClick={onCellClickWrapper} />
+        <Board gameState={gameState} onCellClick={onCellClickWrapper} isTrainingMode={isTrainingMode} />
 
         {/* Player 2 (Red) */}
         <div className="flex flex-col gap-4">
