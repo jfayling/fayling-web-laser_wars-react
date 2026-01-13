@@ -28,11 +28,65 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove }) => {
         >
             {cell.content === 'MIRROR_A' && (
                 // / Mirror (Bottom-Left to Top-Right)
-                <div className={clsx("w-3/4 h-1 rounded-full rotate-45", isRed ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]")} />
+                <div className="relative w-full h-full flex items-center justify-center">
+                    {/* Main reflective surface */}
+                    <div className={clsx(
+                        "w-[85%] h-[6px] rounded-full rotate-45 relative",
+                        isRed
+                            ? "bg-gradient-to-br from-red-400 via-red-500 to-red-600 shadow-[0_0_15px_rgba(239,68,68,0.9)]"
+                            : "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.9)]"
+                    )}>
+                        {/* Highlight to show reflective surface */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-full" />
+                    </div>
+
+                    {/* Direction indicators - small arrows showing reflection path */}
+                    <div className="absolute inset-0 rotate-45">
+                        {/* Top-right arrow */}
+                        <div className="absolute -top-1 -right-1">
+                            <svg width="10" height="10" viewBox="0 0 10 10" className={clsx(isRed ? "text-red-400" : "text-blue-400")}>
+                                <path d="M5 0 L8 3 L6 3 L6 7 L4 7 L4 3 L2 3 Z" fill="currentColor" opacity="0.6" />
+                            </svg>
+                        </div>
+                        {/* Bottom-left arrow */}
+                        <div className="absolute -bottom-1 -left-1 rotate-180">
+                            <svg width="10" height="10" viewBox="0 0 10 10" className={clsx(isRed ? "text-red-400" : "text-blue-400")}>
+                                <path d="M5 0 L8 3 L6 3 L6 7 L4 7 L4 3 L2 3 Z" fill="currentColor" opacity="0.6" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
             )}
             {cell.content === 'MIRROR_B' && (
                 // \ Mirror (Top-Left to Bottom-Right)
-                <div className={clsx("w-3/4 h-1 rounded-full -rotate-45", isRed ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]" : "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]")} />
+                <div className="relative w-full h-full flex items-center justify-center">
+                    {/* Main reflective surface */}
+                    <div className={clsx(
+                        "w-[85%] h-[6px] rounded-full -rotate-45 relative",
+                        isRed
+                            ? "bg-gradient-to-br from-red-400 via-red-500 to-red-600 shadow-[0_0_15px_rgba(239,68,68,0.9)]"
+                            : "bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.9)]"
+                    )}>
+                        {/* Highlight to show reflective surface */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-transparent to-transparent rounded-full" />
+                    </div>
+
+                    {/* Direction indicators - small arrows showing reflection path */}
+                    <div className="absolute inset-0 -rotate-45">
+                        {/* Top-right arrow */}
+                        <div className="absolute -top-1 -right-1">
+                            <svg width="10" height="10" viewBox="0 0 10 10" className={clsx(isRed ? "text-red-400" : "text-blue-400")}>
+                                <path d="M5 0 L8 3 L6 3 L6 7 L4 7 L4 3 L2 3 Z" fill="currentColor" opacity="0.6" />
+                            </svg>
+                        </div>
+                        {/* Bottom-left arrow */}
+                        <div className="absolute -bottom-1 -left-1 rotate-180">
+                            <svg width="10" height="10" viewBox="0 0 10 10" className={clsx(isRed ? "text-red-400" : "text-blue-400")}>
+                                <path d="M5 0 L8 3 L6 3 L6 7 L4 7 L4 3 L2 3 Z" fill="currentColor" opacity="0.6" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
             )}
             {cell.content === 'BLOCK' && (
                 <Shield size={24} className="text-gray-500" />
@@ -53,8 +107,8 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove }) => {
                         className="absolute flex items-center justify-center transition-transform duration-300"
                         style={{
                             transform: `rotate(${cell.orientation === 'RIGHT' ? 90 :
-                                    cell.orientation === 'DOWN' ? 180 :
-                                        cell.orientation === 'LEFT' ? 270 : 0
+                                cell.orientation === 'DOWN' ? 180 :
+                                    cell.orientation === 'LEFT' ? 270 : 0
                                 }deg) translateY(-8px)` // Push out from center
                         }}
                     >
