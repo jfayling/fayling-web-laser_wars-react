@@ -115,26 +115,11 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
     const allMovesWithScores: Array<{ move: AiMove; score: number }> = [];
 
     for (const move of moves) {
-        if (rootState.grid[0][1].content !== 'EMPTY' && rootState.grid[0][1].content !== undefined) {
-            console.log(`[AI-TRACE] CRITICAL: rootState polluted at (1,0)! Content: ${rootState.grid[0][1].content}`);
-        }
-
-        if (move.x === 3 && move.y === 9 && move.tool === 'MIRROR') {
-            DebugState.enabled = true;
-            console.log('--- ENTERING DEBUG MODE FOR MIRROR(3,9) ---');
-        }
-
         const nextState = applyMoveAndResolve(rootState, move);
         const val = alphaBeta(nextState, maxDepth - 1, alpha, beta, false, aiPlayer);
 
         // Store move with score
         allMovesWithScores.push({ move, score: val });
-
-        if (DebugState.enabled && move.x === 3 && move.y === 9) {
-            DebugState.enabled = false;
-            console.log('--- EXITING DEBUG MODE ---');
-        }
-
         if (val > maxVal) {
             maxVal = val;
             bestMoves = [move];
@@ -147,9 +132,7 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
         }
 
         // Debug Critical Moves
-        if ((move.x === 8 && move.y === 8) || (move.x === 8 && move.y === 0) || (move.x === 3 && move.y === 9)) {
-            console.log(`[AI-TRACE] Move ${move.tool}(${move.x},${move.y}) -> Score: ${val}`);
-        }
+
     }
 
     // Panic Mode: If we are threatened, and we didn't find a winning move, force DEFUSE if available.
@@ -280,15 +263,7 @@ const alphaBeta = (state: AIState, depth: number, alpha: number, beta: number, i
         for (const move of moves) {
             const nextState = applyMoveAndResolve(state, move);
 
-            // Debug BOMB 8,8 execution
-            if (DebugState.enabled && move.tool === 'BOMB' && move.x === 8 && move.y === 8) {
-                const term = evaluateTerminal(nextState, rootPlayer);
-                if (term !== null) {
-                    console.log(`[AI-TRACE] Executed BOMB(8,8). Terminal Score: ${term}`);
-                } else {
-                    console.log(`[AI-TRACE] Executed BOMB(8,8). NOT TERMINAL! Heuristic: ${evaluateHeuristic(nextState, rootPlayer)}`);
-                }
-            }
+
 
             const evalScore = alphaBeta(nextState, depth - 1, alpha, beta, false, rootPlayer);
 
@@ -299,29 +274,21 @@ const alphaBeta = (state: AIState, depth: number, alpha: number, beta: number, i
         return maxEval;
     } else {
         let minEval = Infinity;
-        let blueMoveCount = 0;
-        if (DebugState.enabled) {
-            console.log(`[AI-TRACE-BLUE] Loop Start. Moves length: ${moves.length}`);
-        }
-        for (const move of moves) {
 
-            if (DebugState.enabled) {
-                console.log(`[AI-TRACE-BLUE] Loop ${blueMoveCount}: ${move.tool}(${move.x},${move.y})`);
-                if (move.tool === 'BOMB' && move.x === 8 && move.y === 8) {
-                    console.log(`[AI-TRACE-BLUE] !!! FOUND BOMB(8,8) IN LOOP at index ${blueMoveCount} !!!`);
-                }
-                blueMoveCount++;
-            }
+        for (const move of moves) {
 
             const nextState = applyMoveAndResolve(state, move);
 
-            // Debug BOMB 8,8 execution (Minimizer/Blue)
-            if (DebugState.enabled && move.tool === 'BOMB' && move.x === 8 && move.y === 8) {
+            if (move.tool === 'MIRROR' && move.x === 8 && move.y === 9) {
                 const term = evaluateTerminal(nextState, rootPlayer);
+                const laserRes = calculateLaserPath(nextState.grid, 'BLUE');
+
+                console.log(`[FORCE-DEBUG] MIRROR(8,9) checked. Term: ${term}. HitType: ${laserRes.hitType}. PathLen: ${laserRes.path.length}`);
+                console.log(`[FORCE-DEBUG] Path: ${JSON.stringify(laserRes.path)}`);
                 if (term !== null) {
-                    console.log(`[AI-TRACE-BLUE] Executed BOMB(8,8). Terminal Score: ${term}`);
+                    console.log(`[FORCE-DEBUG] MIRROR(8,9) is TERMINAL: ${term}`);
                 } else {
-                    console.log(`[AI-TRACE-BLUE] Executed BOMB(8,8). NOT TERMINAL! Heuristic: ${evaluateHeuristic(nextState, rootPlayer)}`);
+                    console.log(`[FORCE-DEBUG] MIRROR(8,9) Evaluation: ${evaluateHeuristic(nextState, rootPlayer)}`);
                 }
             }
 
@@ -329,9 +296,6 @@ const alphaBeta = (state: AIState, depth: number, alpha: number, beta: number, i
             minEval = Math.min(minEval, evalScore);
             beta = Math.min(beta, evalScore);
             if (beta < alpha) break;
-        }
-        if (depth === 2 && DebugState.enabled) {
-            console.log(`[AI-TRACE-BLUE] Depth 2 Best Score: ${minEval}`);
         }
         return minEval;
     }
@@ -381,11 +345,20 @@ const generateMoves = (state: AIState): AiMove[] => {
     if (DebugState.enabled && state.currentTurn === 'BLUE') {
         console.log(`[AI-TRACE-GEN] Generating moves for BLUE. Total generated: ${validMoves.length}`);
         const hasBomb88 = validMoves.some(m => m.tool === 'BOMB' && m.x === 8 && m.y === 8);
+        const hasMirror89 = validMoves.some(m => m.tool === 'MIRROR' && m.x === 8 && m.y === 9);
+
         if (hasBomb88) {
             console.log(`[AI-TRACE-GEN] BOMB(8,8) IS PRESENT in generated moves.`);
         } else {
             const c88 = grid[8][8];
             console.log(`[AI-TRACE-GEN] BOMB(8,8) NOT PRESENT! Cell(8,8): ${c88.content}, Owner: ${c88.owner}`);
+        }
+
+        if (hasMirror89) {
+            console.log(`[AI-TRACE-GEN] MIRROR(8,9) IS PRESENT in generated moves.`);
+        } else {
+            const c89 = grid[9][8]; // Note: y come first
+            console.log(`[AI-TRACE-GEN] MIRROR(8,9) NOT PRESENT! Cell(8,9): ${grid[9][8].content}, Owner: ${grid[9][8].owner}`);
         }
     }
 
@@ -509,16 +482,28 @@ const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
 
     // Check current player's laser
     const { hit, hitType, path } = calculateLaserPath(nextGrid, player);
-    if (hit && hitType === 'BOMB') {
-        const bombPos = path[path.length - 1];
-        applyBlast(nextGrid, bombPos.x, bombPos.y);
-    }
-
-    // Check opponent's laser (this was missing!)
-    const opponentLaser = calculateLaserPath(nextGrid, opponent);
-    if (opponentLaser.hit && opponentLaser.hitType === 'BOMB') {
-        const bombPos = opponentLaser.path[opponentLaser.path.length - 1];
-        applyBlast(nextGrid, bombPos.x, bombPos.y);
+    if (hit) {
+        if (hitType === 'BOMB') {
+            const bombPos = path[path.length - 1];
+            applyBlast(nextGrid, bombPos.x, bombPos.y);
+        } else if (hitType === 'SOURCE') {
+            // Hit Enemy Source - Destroy it!
+            const targetPos = path[path.length - 1];
+            // Only destroy if it's actually a source (sanity check)
+            if (nextGrid[targetPos.y][targetPos.x].content === 'SOURCE') {
+                if (DebugState.enabled) console.log(`[AI-TRACE] DIRECT HIT on ENEMY SOURCE at (${targetPos.x},${targetPos.y})`);
+                nextGrid[targetPos.y][targetPos.x].content = 'EMPTY';
+                nextGrid[targetPos.y][targetPos.x].owner = null;
+            }
+        } else if (hitType === 'SELF') {
+            // Hit Own Source (Suicide) - Destroy it!
+            const targetPos = path[path.length - 1];
+            if (nextGrid[targetPos.y][targetPos.x].content === 'SOURCE') {
+                if (DebugState.enabled) console.log(`[AI-TRACE] SUICIDE HIT on OWN SOURCE at (${targetPos.x},${targetPos.y})`);
+                nextGrid[targetPos.y][targetPos.x].content = 'EMPTY';
+                nextGrid[targetPos.y][targetPos.x].owner = null;
+            }
+        }
     }
 
     return {
