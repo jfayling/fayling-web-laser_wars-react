@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, FileText, Download, Eye, Play } from 'lucide-react';
+import { X, FileText, Download, Eye, Play, Copy } from 'lucide-react';
 import type { RecordedMove, GameSession } from '../types';
 import { JsonViewerModal } from './JsonViewerModal';
 
@@ -44,6 +44,7 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose,
                             <thead className="bg-gray-900 sticky top-0">
                                 <tr>
                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800">#</th>
+                                    <th className="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800">ID</th>
                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800">Player</th>
                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800">Action</th>
                                     <th className="p-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-800">Pos (X,Y)</th>
@@ -55,14 +56,24 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose,
                             <tbody className="font-mono text-sm">
                                 {moves.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className="p-8 text-center text-gray-500 italic">
+                                        <td colSpan={8} className="p-8 text-center text-gray-500 italic">
                                             No moves recorded yet.
                                         </td>
                                     </tr>
                                 ) : (
-                                    moves.map((move, i) => (
-                                        <tr key={i} className="border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors">
+                                    moves.map((move) => (
+                                        <tr key={move.id} className="border-b border-gray-800/50 hover:bg-gray-900/50 transition-colors">
                                             <td className="p-3 text-gray-600">{move.moveIndex + 1}</td>
+                                            <td className="p-3 font-mono text-xs">
+                                                <button
+                                                    onClick={() => navigator.clipboard.writeText(move.id || '')}
+                                                    className="flex items-center gap-1 text-gray-500 hover:text-white transition-colors group"
+                                                    title="Click to copy ID"
+                                                >
+                                                    {move.id ? `${move.id.slice(0, 8)}` : '-'}
+                                                    {move.id && <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
+                                                </button>
+                                            </td>
                                             <td className={`p-3 font-bold ${move.turn === 'BLUE' ? 'text-blue-400' : 'text-red-400'}`}>
                                                 {move.turn}
                                             </td>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { SkipBack, ChevronLeft, ChevronRight, SkipForward } from 'lucide-react';
+import { SkipBack, ChevronLeft, ChevronRight, SkipForward, Copy } from 'lucide-react';
 import type { RecordedMove } from '../types';
 
 interface PlaybackControlsProps {
@@ -98,6 +98,19 @@ export const PlaybackControls: React.FC<PlaybackControlsProps> = ({
                             <span className={`ml-2 font-bold ${currentMove.turn === 'BLUE' ? 'text-blue-400' : 'text-red-500'}`}>
                                 {currentMove.turn}
                             </span>
+                        </div>
+
+                        <div>
+                            <span className="text-gray-500">ID:</span>
+                            <button
+                                onClick={() => currentMove.id && navigator.clipboard.writeText(currentMove.id)}
+                                className="ml-2 flex items-center gap-1 text-gray-400 hover:text-white transition-colors group font-mono text-xs"
+                                title="Click to copy ID"
+                                disabled={!currentMove.id}
+                            >
+                                {currentMove.id ? currentMove.id.slice(0, 8) : 'N/A'}
+                                {currentMove.id && <Copy size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />}
+                            </button>
                         </div>
 
                         <div>

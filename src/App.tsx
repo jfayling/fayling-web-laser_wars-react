@@ -44,6 +44,7 @@ function App() {
     let x = -1;
     let y = -1;
     let details = '';
+    const id = crypto.randomUUID();
 
     if (currentGameState.activeCell) {
       x = currentGameState.activeCell.x;
@@ -65,6 +66,7 @@ function App() {
     }
 
     return {
+      id,
       moveIndex: moveHistory.length,
       turn: currentGameState.turn,
       actionType,
@@ -197,6 +199,7 @@ function App() {
           // Record AI Move Immediately (before async delay/state updates)
           if (isTrainingMode) {
             setMoveHistory(prev => [...prev, {
+              id: crypto.randomUUID(),
               moveIndex: prev.length,
               turn: 'RED',
               actionType: move.tool,
@@ -224,6 +227,7 @@ function App() {
           // No move? Just fire.
           if (isTrainingMode) {
             setMoveHistory(prev => [...prev, {
+              id: crypto.randomUUID(),
               moveIndex: prev.length,
               turn: 'RED',
               actionType: 'PASS',
@@ -289,6 +293,7 @@ function App() {
     // Record terminal actions immediately in training mode
     if (isTrainingMode && isTerminalAction && gameState.turn === 'BLUE') {
       setMoveHistory(prev => [...prev, {
+        id: crypto.randomUUID(),
         moveIndex: prev.length,
         turn: 'BLUE',
         actionType: selectedTool,

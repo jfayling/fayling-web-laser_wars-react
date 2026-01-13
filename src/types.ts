@@ -61,6 +61,7 @@ export interface AIDecisionReason {
 }
 
 export interface RecordedMove {
+    id: string; // Unique identifier for the move
     moveIndex: number; // Sequential move number (0-based)
     turn: Player;
     actionType: ToolType | 'PASS'; // PASS if they just fired without doing anything
