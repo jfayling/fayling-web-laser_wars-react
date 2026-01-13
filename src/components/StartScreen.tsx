@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Users, Monitor, Zap, HelpCircle } from 'lucide-react';
+import { Users, Monitor, Zap, HelpCircle, Play } from 'lucide-react';
 import { HowToPlayModal } from './HowToPlayModal';
 
 interface StartScreenProps {
-    onSelectMode: (mode: 'PVP' | 'PVE') => void;
+    onSelectMode: (mode: 'PVP' | 'PVE' | 'PLAYBACK') => void;
 }
 
 export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode }) => {
     const [showHowToPlay, setShowHowToPlay] = useState(false);
+
+    // Check if training mode is enabled via feature flags
+    const params = new URLSearchParams(window.location.search);
+    const features = params.get('features')?.split(',') || [];
+    const allowTraining = features.includes('ALLOW_TRAINING') || features.includes('AUTO_START_TRAINING');
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-950/90 backdrop-blur-sm">
@@ -48,6 +53,17 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode }) => {
                         <span className="text-2xl font-bold text-white">PvE</span>
                         <span className="text-sm text-gray-400 mt-2">Vs Computer</span>
                     </button>
+
+                    {allowTraining && (
+                        <button
+                            onClick={() => onSelectMode('PLAYBACK')}
+                            className="flex flex-col items-center justify-center w-48 h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-purple-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
+                        >
+                            <Play size={48} className="mb-4 text-purple-400 group-hover:text-purple-300" />
+                            <span className="text-2xl font-bold text-white">Playback</span>
+                            <span className="text-sm text-gray-400 mt-2">Review Games</span>
+                        </button>
+                    )}
                 </div>
             </div>
 

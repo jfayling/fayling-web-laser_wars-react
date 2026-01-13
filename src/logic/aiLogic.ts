@@ -154,7 +154,8 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
 
     // Panic Mode: If we are threatened, and we didn't find a winning move, force DEFUSE if available.
     const rootScore = evaluateHeuristic(rootState, aiPlayer);
-    const isThreatened = rootScore <= -2000; // Threshold for THREAT_BOMB_NEAR_SOURCE
+    // Updated threshold to catch both THREAT_BOMB_NEAR_SOURCE (-5000) and THREAT_LASER_BOMB_SUICIDE (-10000)
+    const isThreatened = rootScore <= -2000;
     const isWinning = maxVal >= AI_CONFIG.scores.WIN - 1000;
     let panicMode = false;
 
@@ -632,6 +633,65 @@ const evaluateLaserPath = (grid: Cell[][], player: Player): number => {
     return score;
 };
 
+/**
+ * Detects if the AI's laser will hit an opponent's bomb that could destroy its source.
+ * This is a critical defensive check - if the AI's laser hits an opponent's bomb,
+ * the bomb explodes in a 3x3 area, potentially destroying the AI's source.
+ * 
+ * Returns a large negative score if such a threat is detected.
+ */
+const detectLaserBombThreat = (grid: Cell[][], player: Player): number => {
+    let score = 0;
+
+    // Calculate the laser path for this player
+    const { hit, hitType, path } = calculateLaserPath(grid, player);
+
+    // If the laser doesn't hit a bomb, no threat
+    if (!hit || hitType !== 'BOMB') {
+        return 0;
+    }
+
+    // Get the bomb position (last point in the path)
+    const bombPos = path[path.length - 1];
+
+    // Check if this bomb belongs to the opponent
+    const bombCell = grid[bombPos.y][bombPos.x];
+    if (bombCell.owner === player) {
+        return 0; // It's our own bomb, not a threat in this context
+    }
+
+    // Find the AI's source position
+    let sourceX = -1;
+    let sourceY = -1;
+
+    for (let y = 0; y < grid.length; y++) {
+        for (let x = 0; x < grid[0].length; x++) {
+            if (grid[y][x].content === 'SOURCE' && grid[y][x].owner === player) {
+                sourceX = x;
+                sourceY = y;
+                break;
+            }
+        }
+        if (sourceX !== -1) break;
+    }
+
+    if (sourceX === -1) {
+        return 0; // No source found (shouldn't happen)
+    }
+
+    // Check if the source is within the bomb's explosion radius (3x3 area)
+    const distanceX = Math.abs(sourceX - bombPos.x);
+    const distanceY = Math.abs(sourceY - bombPos.y);
+
+    // Bomb explosion affects cells within 1 cell in all directions (3x3 grid)
+    if (distanceX <= 1 && distanceY <= 1) {
+        console.log(`[AI-THREAT] CRITICAL: Laser will hit opponent bomb at (${bombPos.x},${bombPos.y}) which will destroy source at (${sourceX},${sourceY})!`);
+        score += AI_CONFIG.scores.THREAT_LASER_BOMB_SUICIDE;
+    }
+
+    return score;
+};
+
 // --- Positional Evaluation ---
 
 /**
@@ -762,6 +822,11 @@ const getEvaluationBreakdown = (state: AIState, rootPlayer: Player): import('../
 
     const laserPathScore = evaluateLaserPath(grid, rootPlayer);
     const positionScore = evaluatePosition(grid, rootPlayer);
+
+    // Add laser-bomb threat detection to threat score
+    const laserBombThreatScore = detectLaserBombThreat(grid, rootPlayer);
+    threatScore += laserBombThreatScore;
+
     const totalScore = materialScore + threatScore + laserPathScore + positionScore;
 
     return {
@@ -844,6 +909,9 @@ const evaluateHeuristic = (state: AIState, rootPlayer: Player): number => {
 
     // Add positional advantage scoring
     score += evaluatePosition(grid, rootPlayer);
+
+    // CRITICAL: Check if our laser will hit an opponent's bomb that could destroy our source
+    score += detectLaserBombThreat(grid, rootPlayer);
 
     return score;
 };

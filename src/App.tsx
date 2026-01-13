@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { Board } from './components/Board';
 import { StartScreen } from './components/StartScreen';
+import { PlaybackScreen } from './components/PlaybackScreen';
 import { useGameState } from './hooks/useGameState';
 import { useSound } from './hooks/useSound';
 import { calculateAiMove } from './logic/aiLogic';
@@ -17,7 +18,7 @@ import type { RecordedMove, GameSession, AIConfiguration } from './types';
 import { AI_ENGINE_VERSION } from './logic/aiLogic';
 import AI_CONFIG from './logic/aiConfig.json';
 
-export type GameMode = 'PVP' | 'PVE' | null;
+export type GameMode = 'PVP' | 'PVE' | 'PLAYBACK' | null;
 
 function App() {
   const [gameMode, setGameMode] = useState<GameMode>(null);
@@ -107,7 +108,7 @@ function App() {
 
     return {
       date: new Date().toISOString(),
-      mode: gameMode || 'PVP',
+      mode: (gameMode === 'PVP' || gameMode === 'PVE') ? gameMode : 'PVP',
       winner: gameState.winner,
       winReason: gameState.winReason,
       moves: moveHistory,
@@ -337,6 +338,10 @@ function App() {
 
   if (!gameMode) {
     return <StartScreen onSelectMode={setGameMode} />;
+  }
+
+  if (gameMode === 'PLAYBACK') {
+    return <PlaybackScreen onExit={() => setGameMode(null)} />;
   }
 
   /* New handler for tool selection */
