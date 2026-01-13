@@ -341,26 +341,7 @@ const generateMoves = (state: AIState): AiMove[] => {
         }
     }
 
-    // Debug: Check if BOMB 8,8 is generated
-    if (DebugState.enabled && state.currentTurn === 'BLUE') {
-        console.log(`[AI-TRACE-GEN] Generating moves for BLUE. Total generated: ${validMoves.length}`);
-        const hasBomb88 = validMoves.some(m => m.tool === 'BOMB' && m.x === 8 && m.y === 8);
-        const hasMirror89 = validMoves.some(m => m.tool === 'MIRROR' && m.x === 8 && m.y === 9);
 
-        if (hasBomb88) {
-            console.log(`[AI-TRACE-GEN] BOMB(8,8) IS PRESENT in generated moves.`);
-        } else {
-            const c88 = grid[8][8];
-            console.log(`[AI-TRACE-GEN] BOMB(8,8) NOT PRESENT! Cell(8,8): ${c88.content}, Owner: ${c88.owner}`);
-        }
-
-        if (hasMirror89) {
-            console.log(`[AI-TRACE-GEN] MIRROR(8,9) IS PRESENT in generated moves.`);
-        } else {
-            const c89 = grid[9][8]; // Note: y come first
-            console.log(`[AI-TRACE-GEN] MIRROR(8,9) NOT PRESENT! Cell(8,9): ${grid[9][8].content}, Owner: ${grid[9][8].owner}`);
-        }
-    }
 
     if (sourceX !== -1 && sourceY !== -1) {
         const directions = [
