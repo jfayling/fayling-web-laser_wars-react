@@ -58,6 +58,7 @@ export interface AIDecisionReason {
     panicMode: boolean;
     searchDepth: number;
     totalMovesConsidered: number;
+    thinkingTime: number; // Duration in milliseconds
 }
 
 export interface RecordedMove {

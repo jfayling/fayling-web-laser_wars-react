@@ -105,6 +105,7 @@ const detectActionLoop = (moveHistory: RecordedMove[], aiPlayer: Player, actionT
 // --- Alpha-Beta Search ---
 
 const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: Player, moveHistory: RecordedMove[] = []): AiMove | null => {
+    const startTime = performance.now();
     const moves = generateMoves(rootState);
     if (moves.length === 0) return null;
 
@@ -131,6 +132,16 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
 
         if (alpha < val) {
             alpha = val;
+        }
+
+        // Optimization: Early exit if we found the best possible outcome (Immediate Win)
+        // Max possible score is WIN + (maxDepth - 1) because we are at root, examining immediate children (depth 1 away from root? No, moves result in depth maxDepth-1)
+        // If maxDepth is 3. Child state is at depth 2 (passed to alphaBeta).
+        // If Child returns WIN + 2. That is max possible.
+        const maxPossibleScore = AI_CONFIG.scores.WIN + (maxDepth - 1);
+        if (alpha >= maxPossibleScore) {
+            console.log(`[AI-OPTIMIZATION] Found max possible score (${alpha}). Early exit.`);
+            break;
         }
 
         // Debug Critical Moves
@@ -173,7 +184,8 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
                     loopDetected: false,
                     panicMode: true,
                     searchDepth: maxDepth,
-                    totalMovesConsidered: moves.length
+                    totalMovesConsidered: moves.length,
+                    thinkingTime: performance.now() - startTime
                 };
 
                 return defuseMove;
@@ -238,7 +250,8 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
         loopDetected,
         panicMode,
         searchDepth: maxDepth,
-        totalMovesConsidered: moves.length
+        totalMovesConsidered: moves.length,
+        thinkingTime: performance.now() - startTime
     };
 
     return selectedMove;
@@ -248,6 +261,20 @@ const alphaBeta = (state: AIState, depth: number, alpha: number, beta: number, i
     // 1. Check Terminal Conditions / Leaf
     const terminalScore = evaluateTerminal(state, rootPlayer);
     if (terminalScore !== null) {
+        // Prefer faster wins (higher remaining depth)
+        if (terminalScore > 0) {
+            return terminalScore + depth;
+        }
+        // Prefer slower losses (lower remaining depth for the loss means it's further away? No, depth decreases as we go down)
+        // Root is maxDepth. Leaves are 0.
+        // If we find a loss at depth 2 (close to root), we want to avoid it MORE than a loss at depth 0.
+        // We want to MAXIMIZE the score.
+        // Loss at depth 2: -1M - 2 = -1000002
+        // Loss at depth 0: -1M - 0 = -1000000
+        // -1000000 > -1000002, so we prefer the delayed loss.
+        if (terminalScore < 0) {
+            return terminalScore - depth;
+        }
         return terminalScore;
     }
 
@@ -281,18 +308,7 @@ const alphaBeta = (state: AIState, depth: number, alpha: number, beta: number, i
 
             const nextState = applyMoveAndResolve(state, move);
 
-            if (move.tool === 'MIRROR' && move.x === 8 && move.y === 9) {
-                const term = evaluateTerminal(nextState, rootPlayer);
-                const laserRes = calculateLaserPath(nextState.grid, 'BLUE');
 
-                console.log(`[FORCE-DEBUG] MIRROR(8,9) checked. Term: ${term}. HitType: ${laserRes.hitType}. PathLen: ${laserRes.path.length}`);
-                console.log(`[FORCE-DEBUG] Path: ${JSON.stringify(laserRes.path)}`);
-                if (term !== null) {
-                    console.log(`[FORCE-DEBUG] MIRROR(8,9) is TERMINAL: ${term}`);
-                } else {
-                    console.log(`[FORCE-DEBUG] MIRROR(8,9) Evaluation: ${evaluateHeuristic(nextState, rootPlayer)}`);
-                }
-            }
 
             const evalScore = alphaBeta(nextState, depth - 1, alpha, beta, true, rootPlayer);
             minEval = Math.min(minEval, evalScore);
@@ -312,6 +328,23 @@ const generateMoves = (state: AIState): AiMove[] => {
 
     let sourceX = -1;
     let sourceY = -1;
+
+    // Find Enemy Source for sorting
+    const opponent = currentTurn === 'RED' ? 'BLUE' : 'RED';
+    let enemySourceX = -1;
+    let enemySourceY = -1;
+    for (let y = 0; y < boardSize; y++) {
+        for (let x = 0; x < boardSize; x++) {
+            if (grid[y][x].content === 'SOURCE' && grid[y][x].owner === opponent) {
+                enemySourceX = x;
+                enemySourceY = y;
+                // Don't break here if we want to support multiple sources? 
+                // AI currently assumes 1, so break is fine.
+                break;
+            }
+        }
+        if (enemySourceX !== -1) break;
+    }
 
     for (let y = 0; y < boardSize; y++) {
         for (let x = 0; x < boardSize; x++) {
@@ -365,12 +398,36 @@ const generateMoves = (state: AIState): AiMove[] => {
     }
 
     return validMoves.sort((a, b) => {
+        // 1. DEFUSE is highest priority (Self-preservation)
         if (a.tool === 'DEFUSE' && b.tool !== 'DEFUSE') return -1;
         if (b.tool === 'DEFUSE' && a.tool !== 'DEFUSE') return 1;
 
+        // 2. Offensive BOMB (High impact / Potential Win)
+        // Offensive bomb targeting occupied cell? We don't have that info easily here without looking at grid again or checking details?
+        // Actually generateMoves doesn't explicitly flag "offensive" in the Move object, but we can verify against grid if needed OR
+        // just prioritize ALL Bombs over Mirrors?
+        // Offensive bombs are critical. Random bombs are less so.
+        // Let's refine: We can detect offensive by checking if the target cell is NOT empty in the current state.
+        const aIsOffensive = grid[a.y][a.x].content !== 'EMPTY';
+        const bIsOffensive = grid[b.y][b.x].content !== 'EMPTY';
+
+        if (aIsOffensive && !bIsOffensive) return -1;
+        if (bIsOffensive && !aIsOffensive) return 1;
+
+        // 3. Prefer Actions over MOVE (usually)
         if (a.tool === 'MOVE' && b.tool !== 'MOVE') return 1;
         if (b.tool === 'MOVE' && a.tool !== 'MOVE') return -1;
 
+        // 4. Sort by proximity to Enemy Source
+        // We want to check moves closer to the enemy first (likely attacks)
+        if (enemySourceX !== -1) {
+            const distA = Math.abs(a.x - enemySourceX) + Math.abs(a.y - enemySourceY);
+            const distB = Math.abs(b.x - enemySourceX) + Math.abs(b.y - enemySourceY);
+            // If significant difference, sort by distance
+            if (distA !== distB) return distA - distB;
+        }
+
+        // 5. Sort by coordinate (y, then x)
         if (a.y !== b.y) return a.y - b.y;
         return a.x - b.x;
     });
@@ -504,7 +561,7 @@ const applyBlast = (grid: Cell[][], bombX: number, bombY: number) => {
                 const cell = grid[by][bx];
                 if (cell.content !== 'EMPTY') {
                     if (bx === 9 && by === 9) {
-                        console.log(`[AI-TRACE] BLAST HIT (9,9)! Destroying ${cell.content}`);
+                        // console.log(`[AI-TRACE] BLAST HIT (9,9)! Destroying ${cell.content}`);
                     }
                     cell.content = 'EMPTY';
                     cell.owner = null;
@@ -550,11 +607,11 @@ const evaluateTerminal = (state: AIState, rootPlayer: Player): number | null => 
  * - How close the laser gets to the enemy source
  * - Whether the laser has a clear path
  */
-const evaluateLaserPath = (grid: Cell[][], player: Player): number => {
+const evaluateLaserPath = (grid: Cell[][], player: Player, laserResult: any): number => {
     let score = 0;
 
-    // Calculate the laser path for this player
-    const { hit, hitType, path } = calculateLaserPath(grid, player);
+    // Use pre-calculated laser path
+    const { hit, hitType, path } = laserResult;
 
     // Find enemy source position
     const opponent = player === 'RED' ? 'BLUE' : 'RED';
@@ -608,11 +665,11 @@ const evaluateLaserPath = (grid: Cell[][], player: Player): number => {
  * 
  * Returns a large negative score if such a threat is detected.
  */
-const detectLaserBombThreat = (grid: Cell[][], player: Player): number => {
+const detectLaserBombThreat = (grid: Cell[][], player: Player, laserResult: any): number => {
     let score = 0;
 
-    // Calculate the laser path for this player
-    const { hit, hitType, path } = calculateLaserPath(grid, player);
+    // Use pre-calculated laser path
+    const { hit, hitType, path } = laserResult;
 
     // If the laser doesn't hit a bomb, no threat
     if (!hit || hitType !== 'BOMB') {
@@ -788,11 +845,15 @@ const getEvaluationBreakdown = (state: AIState, rootPlayer: Player): import('../
         }
     }
 
-    const laserPathScore = evaluateLaserPath(grid, rootPlayer);
+
+    // Calculate laser path once
+    const laserResult = calculateLaserPath(grid, rootPlayer);
+
+    const laserPathScore = evaluateLaserPath(grid, rootPlayer, laserResult);
     const positionScore = evaluatePosition(grid, rootPlayer);
 
     // Add laser-bomb threat detection to threat score
-    const laserBombThreatScore = detectLaserBombThreat(grid, rootPlayer);
+    const laserBombThreatScore = detectLaserBombThreat(grid, rootPlayer, laserResult);
     threatScore += laserBombThreatScore;
 
     const totalScore = materialScore + threatScore + laserPathScore + positionScore;
@@ -872,14 +933,17 @@ const evaluateHeuristic = (state: AIState, rootPlayer: Player): number => {
         }
     }
 
+    // Calculate laser path once
+    const laserResult = calculateLaserPath(grid, rootPlayer);
+
     // Add laser path effectiveness scoring
-    score += evaluateLaserPath(grid, rootPlayer);
+    score += evaluateLaserPath(grid, rootPlayer, laserResult);
 
     // Add positional advantage scoring
     score += evaluatePosition(grid, rootPlayer);
 
     // CRITICAL: Check if our laser will hit an opponent's bomb that could destroy our source
-    score += detectLaserBombThreat(grid, rootPlayer);
+    score += detectLaserBombThreat(grid, rootPlayer, laserResult);
 
     return score;
 };
