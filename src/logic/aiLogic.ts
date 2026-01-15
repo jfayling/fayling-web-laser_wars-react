@@ -91,8 +91,10 @@ const detectActionLoop = (moveHistory: RecordedMove[], aiPlayer: Player, actionT
         }
     }
 
-    // If we've performed this action at this location 2+ times recently, it's likely a loop
-    if (aiActionCount >= 2) {
+    // If we've performed this action at this location 1+ times recently, it's a loop (for offensive moves)
+    // We want to force variety, so even doing it ONCE recently is enough to ban it for a short time
+    // UNLESS it's a critical defensive DEFUSE (handled above)
+    if (aiActionCount >= 1) {
         console.log(`[AI-LOOP-DETECTION] Detected ${actionType} loop at (${x},${y}). Count: ${aiActionCount}`);
         return true;
     }
