@@ -35,6 +35,15 @@ function App() {
   const [isLogViewerOpen, setIsLogViewerOpen] = useState(false);
   const [moveHistory, setMoveHistory] = useState<RecordedMove[]>([]);
   const [playbackSession, setPlaybackSession] = useState<GameSession | null>(null);
+  const [isWinModalVisible, setIsWinModalVisible] = useState(false);
+
+  useEffect(() => {
+    if (gameState.winner) {
+      setIsWinModalVisible(true);
+    } else {
+      setIsWinModalVisible(false);
+    }
+  }, [gameState.winner]);
 
   const captureMove = (currentGameState: import('./types').GameState, actionType: import('./types').ToolType | 'PASS' = 'PASS'): RecordedMove => {
     // If we have an active cell, that's where the action happened. 
@@ -500,15 +509,15 @@ function App() {
 
       <div className="mt-8">
         <button
-          onClick={onFireWrapper}
+          onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
           className="px-12 py-4 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-full font-bold text-2xl tracking-wider text-black shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          disabled={gameState.isFiring || !!gameState.winner || (gameMode === 'PVE' && gameState.turn === 'RED')}
+          disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED'))}
         >
-          {gameState.winner ? `WINNER: ${gameState.winner}` : (gameState.isFiring ? 'FIRING...' : 'FIRE LASER')}
+          {gameState.winner ? 'SHOW RESULTS' : (gameState.isFiring ? 'FIRING...' : 'FIRE LASER')}
         </button>
       </div>
 
-      {gameState.winner && (
+      {gameState.winner && isWinModalVisible && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
           <div className="text-center animate-in fade-in zoom-in duration-300">
             <h2 className={clsx(
@@ -518,6 +527,12 @@ function App() {
               {gameState.winner} WINS!
             </h2>
             <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setIsWinModalVisible(false)}
+                className="px-8 py-4 bg-gray-800 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+              >
+                VIEW BOARD
+              </button>
               <button
                 onClick={() => window.location.reload()}
                 className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
