@@ -1,4 +1,5 @@
 import type { GameState, Cell, RecordedMove, GameSession, Player, Direction } from '../types';
+import { calculateLaserPath } from '../logic/laserLogic';
 
 const BOARD_SIZE = 10;
 
@@ -175,12 +176,23 @@ export const applyMove = (gameState: GameState, move: RecordedMove): GameState =
     // Check if this is a terminal action that doesn't switch turns
     const isTerminalAction = move.details === 'TERMINAL_ACTION';
 
+    // Calculate laser path for visualization
+    // Default to true for legacy moves (undefined firedLaser)
+    const shouldFireLaser = move.firedLaser !== false;
+    let laserPath: import('../types').Point[] = [];
+
+    if (shouldFireLaser && !isTerminalAction) {
+        // Calculate path using the new grid state
+        const laserResult = calculateLaserPath(newGrid, currentPlayer);
+        laserPath = laserResult.path;
+    }
+
     return {
         ...gameState,
         grid: newGrid,
         turn: isTerminalAction ? (gameState.turn === 'BLUE' ? 'RED' : 'BLUE') : gameState.turn,
         activeCell: null,
-        laserPath: []
+        laserPath
     };
 };
 

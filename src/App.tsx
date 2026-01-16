@@ -199,8 +199,8 @@ function App() {
             // If defusing opponent bomb, it's terminal
             if (cell.content === 'BOMB' && cell.owner === 'BLUE') isTerminal = true;
           } else if (move.tool === 'BOMB') {
+            // Only Offensive Bomb (destroying asset) is terminal
             const cell = gameState.grid[move.y][move.x];
-            // If bombing opponent piece, it's terminal
             if (cell.owner && cell.owner !== 'RED') isTerminal = true;
           }
 
@@ -228,8 +228,17 @@ function App() {
 
           // Fire after short delay
           setTimeout(() => {
-            playFireSound();
-            fireLaser();
+            // For AI, if it's a "No Fire" action, we simulate clicking DONE by skipping laser.
+            // But we need to check move tool.
+            const isNoFire = move.tool === 'WALL' || move.tool === 'MOVE' || move.tool === 'ROTATE_LEFT' || move.tool === 'ROTATE_RIGHT' || (move.tool === 'BOMB' && !isTerminal);
+
+            if (isNoFire) {
+              playFireSound();
+              fireLaser(true);
+            } else {
+              playFireSound();
+              fireLaser();
+            }
           }, 500);
         } else {
           // No move? Just fire.
@@ -313,7 +322,32 @@ function App() {
     }
   };
 
+  // Determine if the current action is a "No-Fire" action
+  // No-fire actions: WALL, BOMB (Placement), ROTATE (Source)
+  const isNoFireAction = (() => {
+    // If rotation is active (source rotation), it's a no-fire action
+    if (gameState.originalOrientation) return true;
+
+    // If a move has been performed (moveStartPos is set), it's a no-fire action
+    if (gameState.moveStartPos) return true;
+
+    // If active cell exists
+    if (gameState.activeCell) {
+      const cell = gameState.grid[gameState.activeCell.y][gameState.activeCell.x];
+      // Placing a Wall
+      if (cell.content === 'WALL') return true;
+      // Placing a Bomb (Defensive/Neutral - Offensive is immediate terminal)
+      // Note: Offensive bombs are terminal actions handled in onCellClickWrapper, so if we are here, it's a placement.
+      if (cell.content === 'BOMB') return true;
+    }
+
+    return false;
+  })();
+
   const onFireWrapper = () => {
+    // Determine if we should skip the laser simulation based on the action
+    const skipSimulation = isNoFireAction;
+
     if (isTrainingMode) {
       // Determine what the user did. 
       // If selectedTool is MOVE, and we have activeCell, it was a move.
@@ -354,11 +388,13 @@ function App() {
       }
 
       const rec = captureMove(gameState, action);
+      // Add firedLaser property
+      rec.firedLaser = !skipSimulation;
       setMoveHistory(prev => [...prev, rec]);
     }
 
-    playFireSound();
-    fireLaser();
+    if (!skipSimulation) playFireSound();
+    fireLaser(skipSimulation);
   };
 
   if (!gameMode) {
@@ -524,10 +560,17 @@ function App() {
       <div className="mt-8">
         <button
           onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
-          className="px-12 py-4 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-full font-bold text-2xl tracking-wider text-black shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          className={clsx(
+            "px-12 py-4 rounded-full font-bold text-2xl tracking-wider text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none",
+            gameState.winner ? "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]" :
+              isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
+                "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
+          )}
           disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED'))}
         >
-          {gameState.winner ? 'SHOW RESULTS' : (gameState.isFiring ? 'FIRING...' : 'FIRE LASER')}
+          {gameState.winner ? 'SHOW RESULTS' :
+            (gameState.isFiring ? 'FIRING...' :
+              (isNoFireAction ? 'DONE' : 'FIRE LASER'))}
         </button>
       </div>
 

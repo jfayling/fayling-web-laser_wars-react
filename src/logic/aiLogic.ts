@@ -4,7 +4,7 @@ import AI_CONFIG from './aiConfig.json';
 import { DebugState } from './debugState';
 
 // AI Engine Version - increment this whenever AI logic changes
-export const AI_ENGINE_VERSION = '1.1.0';
+export const AI_ENGINE_VERSION = '1.2.0';
 
 export interface AiMove {
     x: number;
@@ -520,28 +520,45 @@ const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
     // This ensures we detect when the opponent creates a configuration that causes
     // the AI's laser to hit its own source or other critical scenarios
 
-    // Check current player's laser
-    const { hit, hitType, path } = calculateLaserPath(nextGrid, player);
-    if (hit) {
-        if (hitType === 'BOMB') {
-            const bombPos = path[path.length - 1];
-            applyBlast(nextGrid, bombPos.x, bombPos.y);
-        } else if (hitType === 'SOURCE') {
-            // Hit Enemy Source - Destroy it!
-            const targetPos = path[path.length - 1];
-            // Only destroy if it's actually a source (sanity check)
-            if (nextGrid[targetPos.y][targetPos.x].content === 'SOURCE') {
-                if (DebugState.enabled) console.log(`[AI-TRACE] DIRECT HIT on ENEMY SOURCE at (${targetPos.x},${targetPos.y})`);
-                nextGrid[targetPos.y][targetPos.x].content = 'EMPTY';
-                nextGrid[targetPos.y][targetPos.x].owner = null;
-            }
-        } else if (hitType === 'SELF') {
-            // Hit Own Source (Suicide) - Destroy it!
-            const targetPos = path[path.length - 1];
-            if (nextGrid[targetPos.y][targetPos.x].content === 'SOURCE') {
-                if (DebugState.enabled) console.log(`[AI-TRACE] SUICIDE HIT on OWN SOURCE at (${targetPos.x},${targetPos.y})`);
-                nextGrid[targetPos.y][targetPos.x].content = 'EMPTY';
-                nextGrid[targetPos.y][targetPos.x].owner = null;
+    // Check if we should skip laser simulation for this move
+    // No-fire actions: WALL, BOMB (Placement), ROTATE
+    let skipLaser = false;
+
+    // Check for specific tools that don't fire laser
+    if (move.tool === 'WALL' || move.tool === 'ROTATE_LEFT' || move.tool === 'ROTATE_RIGHT' || move.tool === 'MOVE') {
+        skipLaser = true;
+    } else if (move.tool === 'BOMB') {
+        // Only skip if it's a placement (checked by seeing if we returned early for offensive bomb above)
+        // If we are here, it is a placement bomb (non-offensive) or we would have returned.
+        // Wait, offensive bomb check is on lines 466-472 and returns early.
+        // So if we are here and tool is BOMB, it's a placement.
+        skipLaser = true;
+    }
+
+    if (!skipLaser) {
+        // Check current player's laser
+        const { hit, hitType, path } = calculateLaserPath(nextGrid, player);
+        if (hit) {
+            if (hitType === 'BOMB') {
+                const bombPos = path[path.length - 1];
+                applyBlast(nextGrid, bombPos.x, bombPos.y);
+            } else if (hitType === 'SOURCE') {
+                // Hit Enemy Source - Destroy it!
+                const targetPos = path[path.length - 1];
+                // Only destroy if it's actually a source (sanity check)
+                if (nextGrid[targetPos.y][targetPos.x].content === 'SOURCE') {
+                    if (DebugState.enabled) console.log(`[AI-TRACE] DIRECT HIT on ENEMY SOURCE at (${targetPos.x},${targetPos.y})`);
+                    nextGrid[targetPos.y][targetPos.x].content = 'EMPTY';
+                    nextGrid[targetPos.y][targetPos.x].owner = null;
+                }
+            } else if (hitType === 'SELF') {
+                // Hit Own Source (Suicide) - Destroy it!
+                const targetPos = path[path.length - 1];
+                if (nextGrid[targetPos.y][targetPos.x].content === 'SOURCE') {
+                    if (DebugState.enabled) console.log(`[AI-TRACE] SUICIDE HIT on OWN SOURCE at (${targetPos.x},${targetPos.y})`);
+                    nextGrid[targetPos.y][targetPos.x].content = 'EMPTY';
+                    nextGrid[targetPos.y][targetPos.x].owner = null;
+                }
             }
         }
     }

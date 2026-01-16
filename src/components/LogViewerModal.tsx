@@ -77,7 +77,14 @@ export const LogViewerModal: React.FC<LogViewerModalProps> = ({ isOpen, onClose,
                                             <td className={`p-3 font-bold ${move.turn === 'BLUE' ? 'text-blue-400' : 'text-red-400'}`}>
                                                 {move.turn}
                                             </td>
-                                            <td className="p-3 text-gray-300">{move.actionType}</td>
+                                            <td className="p-3 text-gray-300">
+                                                {move.actionType}
+                                                {move.firedLaser === false && (
+                                                    <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400 border border-gray-700 font-semibold tracking-wider">
+                                                        NO-FIRE
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="p-3 text-gray-400">
                                                 {move.x !== -1 ? `${move.x}, ${move.y}` : '-'}
                                             </td>

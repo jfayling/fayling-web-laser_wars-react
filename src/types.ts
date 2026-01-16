@@ -71,6 +71,7 @@ export interface RecordedMove {
     y: number; // -1 if not applicable
     details?: string; // e.g. "ROTATED_UP_TO_RIGHT" or specific mirror placed
     timestamp: number;
+    firedLaser?: boolean; // If false, no laser was fired for this move
     aiReasoning?: AIDecisionReason; // Only present for AI moves
 }
 

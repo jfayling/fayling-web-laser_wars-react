@@ -358,9 +358,17 @@ export const useGameState = (
         return detectedWinner;
     };
 
-    const fireLaser = useCallback(() => {
+    const fireLaser = useCallback((skipSimulation: boolean = false) => {
         setGameState(prev => {
             if (prev.isFiring || prev.winner) return prev;
+
+            if (skipSimulation) {
+                return {
+                    ...prev,
+                    isFiring: true, // Briefly lock UI
+                    laserPath: [] // No laser
+                };
+            }
 
             const { path, hit, hitType } = calculateLaserPath(prev.grid, prev.turn);
 
@@ -405,9 +413,12 @@ export const useGameState = (
             };
         });
 
+        // Determine delay based on skipSimulation
+        const delay = skipSimulation ? 100 : 2000;
+
         setTimeout(() => {
             setGameState(current => {
-                if (current.winner) return current;
+                if (!current.isFiring || current.winner) return current;
 
                 // Reset tool to MIRROR at the start of new turn
                 setSelectedTool('MIRROR');
@@ -424,9 +435,9 @@ export const useGameState = (
                     isNewPlacement: false
                 };
             });
-        }, 2000);
+        }, delay);
 
-    }, [playExplosionSound, playWallHitSound]);
+    }, [playExplosionSound, playWallHitSound, explodeBomb]);
 
     // Auto-select Source when MOVe tool is active
     useEffect(() => {

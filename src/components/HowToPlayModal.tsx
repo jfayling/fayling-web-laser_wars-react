@@ -116,7 +116,7 @@ export const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ isOpen, onClose 
                         <h3 className="text-xl font-bold text-white mb-3">Gameplay</h3>
                         <ul className="list-disc list-inside space-y-2 ml-2">
                             <li>Players take turns placing <strong>ONE</strong> item per turn.</li>
-                            <li>Or, you can fire your laser to test the path.</li>
+                            <li><strong>New Rule:</strong> Walls, Defensive Bombs, Source Moves, and Source Rotations end the turn immediately without firing the laser.</li>
                             <li>Be careful! A reflected laser can hit your own source.</li>
                         </ul>
                     </div>
