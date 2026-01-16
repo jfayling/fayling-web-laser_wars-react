@@ -697,10 +697,9 @@ const detectLaserBombThreat = (grid: Cell[][], player: Player, laserResult: any)
     const bombPos = path[path.length - 1];
 
     // Check if this bomb belongs to the opponent
-    const bombCell = grid[bombPos.y][bombPos.x];
-    if (bombCell.owner === player) {
-        return 0; // It's our own bomb, not a threat in this context
-    }
+    // const bombCell = grid[bombPos.y][bombPos.x];
+    // REMOVE: if (bombCell.owner === player) return 0;
+    // We treat OWN bombs as threats too if they are near our source!
 
     // Find the AI's source position
     let sourceX = -1;
@@ -727,7 +726,7 @@ const detectLaserBombThreat = (grid: Cell[][], player: Player, laserResult: any)
 
     // Bomb explosion affects cells within 1 cell in all directions (3x3 grid)
     if (distanceX <= 1 && distanceY <= 1) {
-        console.log(`[AI-THREAT] CRITICAL: Laser will hit opponent bomb at (${bombPos.x},${bombPos.y}) which will destroy source at (${sourceX},${sourceY})!`);
+        console.log(`[AI-THREAT] CRITICAL: Laser will hit bomb at (${bombPos.x},${bombPos.y}) which will destroy source at (${sourceX},${sourceY})!`);
         score += AI_CONFIG.scores.THREAT_LASER_BOMB_SUICIDE;
     }
 
