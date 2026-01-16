@@ -132,6 +132,11 @@ export const PlaybackScreen: React.FC<PlaybackScreenProps> = ({ onExit, initialS
                             <div>
                                 <span className="text-gray-500">Mode:</span>
                                 <span className="ml-2 text-white">{playbackState.session.mode}</span>
+                                {playbackState.session.aiConfig && (
+                                    <span className="ml-2 text-xs bg-red-900/40 text-red-300 px-2 py-0.5 rounded border border-red-500/30 font-mono">
+                                        {playbackState.session.aiConfig.difficulty}
+                                    </span>
+                                )}
                             </div>
                             <div>
                                 <span className="text-gray-500">Winner:</span>
