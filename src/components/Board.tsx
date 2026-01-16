@@ -17,7 +17,7 @@ export const Board: React.FC<BoardProps> = ({ gameState, onCellClick, isTraining
                 style={{
                     gridTemplateColumns: `repeat(10, minmax(0, 1fr))`,
                     gridTemplateRows: `repeat(10, minmax(0, 1fr))`,
-                    width: 'min(80vw, 600px, 65vh)',
+                    width: 'min(95vw, 600px, 65vh)',
                     aspectRatio: '1/1',
                 }}
             >

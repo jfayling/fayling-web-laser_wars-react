@@ -506,109 +506,127 @@ function App() {
         </div>
       </header>
 
-      <div className="flex flex-col md:flex-row items-center gap-12">
-        {/* Player 1 (Blue) */}
-        <div className="flex flex-col gap-4">
-          <div className={`p-6 rounded-xl border transition-colors duration-300 ${gameState.turn === 'BLUE' ? 'bg-blue-900/30 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
-            <h2 className="text-xl font-semibold mb-4 text-blue-400">Player 1 (Blue)</h2>
-            <div className={`text-sm ${gameState.turn === 'BLUE' ? 'text-blue-300 font-bold' : 'text-gray-600'}`}>
-              {gameState.turn === 'BLUE' ? 'PLANNING...' : 'WAITING'}
-            </div>
+      <div className="flex flex-col md:flex-col w-full items-center">
+        {/* Controls - Top on Mobile, Bottom on Desktop (via order css or just DOM structure) */}
+        {/* Actually using flex-col-reverse on Desktop means we need:
+            DOM: [Controls, Board]
+            Mobile (flex-col): Controls, Board.
+            Desktop (flex-col-reverse): Board, Controls.
+        */}
+        <div className="flex flex-col md:flex-col-reverse w-full items-center gap-4 md:gap-8">
+
+          {/* Controls Area */}
+          <div className="controls-area w-full flex justify-center z-10">
+            <button
+              onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
+              className={clsx(
+                "px-8 py-3 md:px-12 md:py-4 rounded-full font-bold text-lg md:text-2xl tracking-wider text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg",
+                gameState.winner ? "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]" :
+                  isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
+                    "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
+              )}
+              disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED'))}
+            >
+              {gameState.winner ? 'SHOW RESULTS' :
+                (gameState.isFiring ? 'FIRING...' :
+                  (isNoFireAction ? 'DONE' : 'FIRE LASER'))}
+            </button>
           </div>
-          {gameState.turn === 'BLUE' && (
-            <Toolbar
-              selectedTool={selectedTool}
-              onSelectTool={handleToolSelect}
-              turn="BLUE"
-              isLocked={!!gameState.activeCell && !isRotationActive}
-              hasOpponentBombs={gameState.grid.some(row => row.some(cell => cell.content === 'BOMB' && cell.owner === 'RED'))}
-              disabledTools={disabledTools}
-            />
-          )}
-        </div>
 
-        <Board gameState={gameState} onCellClick={onCellClickWrapper} isTrainingMode={isTrainingMode} />
-
-        {/* Player 2 (Red) */}
-        <div className="flex flex-col gap-4">
-          <div className={`p-6 rounded-xl border transition-colors duration-300 ${gameState.turn === 'RED' ? 'bg-red-900/30 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
-            <h2 className="text-xl font-semibold mb-4 text-red-500">
-              {gameMode === 'PVE' ? `Computer (Red)` : 'Player 2 (Red)'}
-            </h2>
-            {gameMode === 'PVE' && (
-              <div className="text-xs text-red-400/80 uppercase font-bold tracking-wider mb-2 bg-red-900/20 px-2 py-1 rounded inline-block">
-                Level: {activeAiDifficulty}
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full max-w-6xl justify-center">
+            {/* Player 1 (Blue) */}
+            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-auto order-2 md:order-1">
+              <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'BLUE' ? 'bg-blue-900/30 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
+                <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-blue-400">Player 1 (Blue)</h2>
+                <div className={`text-xs md:text-sm ${gameState.turn === 'BLUE' ? 'text-blue-300 font-bold' : 'text-gray-600'}`}>
+                  {gameState.turn === 'BLUE' ? 'PLANNING...' : 'WAITING'}
+                </div>
               </div>
-            )}
-            <div className={`text-sm ${gameState.turn === 'RED' ? 'text-red-300 font-bold' : 'text-gray-600'}`}>
-              {gameState.turn === 'RED' ? (gameMode === 'PVE' ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
+              {gameState.turn === 'BLUE' && (
+                <Toolbar
+                  selectedTool={selectedTool}
+                  onSelectTool={handleToolSelect}
+                  turn="BLUE"
+                  isLocked={!!gameState.activeCell && !isRotationActive}
+                  hasOpponentBombs={gameState.grid.some(row => row.some(cell => cell.content === 'BOMB' && cell.owner === 'RED'))}
+                  disabledTools={disabledTools}
+                />
+              )}
             </div>
-          </div>
-          {gameState.turn === 'RED' && gameMode === 'PVP' && (
-            <Toolbar
-              selectedTool={selectedTool}
-              onSelectTool={handleToolSelect}
-              turn="RED"
-              isLocked={!!gameState.activeCell && !isRotationActive}
-              hasOpponentBombs={gameState.grid.some(row => row.some(cell => cell.content === 'BOMB' && cell.owner === 'BLUE'))}
-              disabledTools={disabledTools}
-            />
-          )}
-        </div>
-      </div>
 
-      <div className="controls-area mt-8">
-        <button
-          onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
-          className={clsx(
-            "px-12 py-4 rounded-full font-bold text-2xl tracking-wider text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none",
-            gameState.winner ? "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]" :
-              isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
-                "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
-          )}
-          disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED'))}
-        >
-          {gameState.winner ? 'SHOW RESULTS' :
-            (gameState.isFiring ? 'FIRING...' :
-              (isNoFireAction ? 'DONE' : 'FIRE LASER'))}
-        </button>
-      </div>
+            <div className="order-1 md:order-2">
+              <Board gameState={gameState} onCellClick={onCellClickWrapper} isTrainingMode={isTrainingMode} />
+            </div>
 
-      {gameState.winner && isWinModalVisible && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <div className="text-center animate-in fade-in zoom-in duration-300">
-            <h2 className={clsx(
-              "text-6xl font-black mb-8 tracking-wider drop-shadow-[0_0_25px_rgba(255,255,255,0.5)]",
-              gameState.winner === 'BLUE' ? "text-blue-500" : "text-red-500"
-            )}>
-              {gameState.winner} WINS!
-            </h2>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={() => setIsWinModalVisible(false)}
-                className="px-8 py-4 bg-gray-800 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)]"
-              >
-                VIEW BOARD
-              </button>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-              >
-                PLAY AGAIN
-              </button>
-              {isTrainingMode && moveHistory.length > 0 && (
-                <button
-                  onClick={() => setIsLogViewerOpen(true)}
-                  className="px-8 py-4 bg-blue-500 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center gap-2"
-                >
-                  <FileText size={24} />
-                  VIEW LOGS
-                </button>
+            {/* Player 2 (Red) */}
+            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-auto order-3">
+              <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'RED' ? 'bg-red-900/30 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
+                <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-red-500">
+                  {gameMode === 'PVE' ? `Computer (Red)` : 'Player 2 (Red)'}
+                </h2>
+                {gameMode === 'PVE' && (
+                  <div className="text-[10px] md:text-xs text-red-400/80 uppercase font-bold tracking-wider md:mb-2 bg-red-900/20 px-2 py-1 rounded inline-block ml-2 md:ml-0">
+                    Level: {activeAiDifficulty}
+                  </div>
+                )}
+                <div className={`text-xs md:text-sm ${gameState.turn === 'RED' ? 'text-red-300 font-bold' : 'text-gray-600'}`}>
+                  {gameState.turn === 'RED' ? (gameMode === 'PVE' ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
+                </div>
+              </div>
+              {gameState.turn === 'RED' && gameMode === 'PVP' && (
+                <Toolbar
+                  selectedTool={selectedTool}
+                  onSelectTool={handleToolSelect}
+                  turn="RED"
+                  isLocked={!!gameState.activeCell && !isRotationActive}
+                  hasOpponentBombs={gameState.grid.some(row => row.some(cell => cell.content === 'BOMB' && cell.owner === 'BLUE'))}
+                  disabledTools={disabledTools}
+                />
               )}
             </div>
           </div>
+
         </div>
-      )}
+      </div>
+
+
+      {
+        gameState.winner && isWinModalVisible && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="text-center animate-in fade-in zoom-in duration-300">
+              <h2 className={clsx(
+                "text-6xl font-black mb-8 tracking-wider drop-shadow-[0_0_25px_rgba(255,255,255,0.5)]",
+                gameState.winner === 'BLUE' ? "text-blue-500" : "text-red-500"
+              )}>
+                {gameState.winner} WINS!
+              </h2>
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => setIsWinModalVisible(false)}
+                  className="px-8 py-4 bg-gray-800 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                >
+                  VIEW BOARD
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+                >
+                  PLAY AGAIN
+                </button>
+                {isTrainingMode && moveHistory.length > 0 && (
+                  <button
+                    onClick={() => setIsLogViewerOpen(true)}
+                    className="px-8 py-4 bg-blue-500 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center gap-2"
+                  >
+                    <FileText size={24} />
+                    VIEW LOGS
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       <MusicControls />
       <SettingsModal
@@ -627,7 +645,7 @@ function App() {
         onExport={downloadTrainingData}
         onPlayback={handlePlayback}
       />
-    </div>
+    </div >
   );
 }
 

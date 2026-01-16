@@ -18,8 +18,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
     const allowTraining = features.includes('ALLOW_TRAINING') || features.includes('AUTO_START_TRAINING');
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-950/90 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-8 p-12 bg-gray-900 border border-gray-800 rounded-3xl shadow-[0_0_50px_rgba(59,130,246,0.2)] relative">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-950/90 backdrop-blur-sm p-4">
+            <div className="flex flex-col items-center gap-4 md:gap-8 p-6 md:p-12 bg-gray-900 border border-gray-800 rounded-3xl shadow-[0_0_50px_rgba(59,130,246,0.2)] relative w-full max-w-4xl">
 
                 <button
                     onClick={() => setShowHowToPlay(true)}
@@ -29,23 +29,25 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                     How to Play
                 </button>
 
-                <div className="text-center mb-4 mt-8">
-                    <h1 className="text-6xl font-bold mb-4 flex items-center justify-center gap-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
-                        <Zap size={64} className="text-yellow-400 fill-yellow-400" />
+                <div className="text-center mb-4 mt-8 md:mt-8">
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4 flex items-center justify-center gap-2 md:gap-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
+                        <Zap size={32} className="md:w-16 md:h-16 text-yellow-400 fill-yellow-400" />
                         LASER WARS
-                        <Zap size={64} className="text-yellow-400 fill-yellow-400" />
+                        <Zap size={32} className="md:w-16 md:h-16 text-yellow-400 fill-yellow-400" />
                     </h1>
-                    <p className="text-xl text-gray-400">Select Game Mode</p>
+                    <p className="text-lg md:text-xl text-gray-400">Select Game Mode</p>
                 </div>
 
-                <div className="flex gap-6">
+                <div className="flex flex-col md:flex-row gap-4 md:gap-6 w-full md:w-auto">
                     <button
                         onClick={() => onSelectMode('PVP')}
-                        className="flex flex-col items-center justify-center w-48 h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-blue-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
+                        className="flex flex-row md:flex-col items-center justify-center md:justify-center p-4 md:p-0 gap-4 md:gap-0 w-full md:w-48 h-20 md:h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-blue-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
                     >
-                        <Users size={48} className="mb-4 text-blue-400 group-hover:text-blue-300" />
-                        <span className="text-2xl font-bold text-white">PvP</span>
-                        <span className="text-sm text-gray-400 mt-2">Local Multiplayer</span>
+                        <Users size={32} className="md:w-12 md:h-12 md:mb-4 text-blue-400 group-hover:text-blue-300" />
+                        <div className="text-left md:text-center">
+                            <span className="text-xl md:text-2xl font-bold text-white block">PvP</span>
+                            <span className="text-sm text-gray-400 mt-0 md:mt-2 block">Local Multiplayer</span>
+                        </div>
                     </button>
 
                     <button
@@ -53,21 +55,25 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                             setSelectedDifficulty(defaultDifficulty);
                             setShowDifficultySelect(true);
                         }}
-                        className="flex flex-col items-center justify-center w-48 h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-red-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
+                        className="flex flex-row md:flex-col items-center justify-center md:justify-center p-4 md:p-0 gap-4 md:gap-0 w-full md:w-48 h-20 md:h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-red-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
                     >
-                        <Monitor size={48} className="mb-4 text-red-500 group-hover:text-red-300" />
-                        <span className="text-2xl font-bold text-white">PvE</span>
-                        <span className="text-sm text-gray-400 mt-2">Vs Computer</span>
+                        <Monitor size={32} className="md:w-12 md:h-12 md:mb-4 text-red-500 group-hover:text-red-300" />
+                        <div className="text-left md:text-center">
+                            <span className="text-xl md:text-2xl font-bold text-white block">PvE</span>
+                            <span className="text-sm text-gray-400 mt-0 md:mt-2 block">Vs Computer</span>
+                        </div>
                     </button>
 
                     {allowTraining && (
                         <button
                             onClick={() => onSelectMode('PLAYBACK')}
-                            className="flex flex-col items-center justify-center w-48 h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-purple-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
+                            className="flex flex-row md:flex-col items-center justify-center md:justify-center p-4 md:p-0 gap-4 md:gap-0 w-full md:w-48 h-20 md:h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-purple-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
                         >
-                            <Play size={48} className="mb-4 text-purple-400 group-hover:text-purple-300" />
-                            <span className="text-2xl font-bold text-white">Playback</span>
-                            <span className="text-sm text-gray-400 mt-2">Review Games</span>
+                            <Play size={32} className="md:w-12 md:h-12 md:mb-4 text-purple-400 group-hover:text-purple-300" />
+                            <div className="text-left md:text-center">
+                                <span className="text-xl md:text-2xl font-bold text-white block">Playback</span>
+                                <span className="text-sm text-gray-400 mt-0 md:mt-2 block">Review Games</span>
+                            </div>
                         </button>
                     )}
                 </div>
@@ -90,8 +96,8 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                                     key={diff}
                                     onClick={() => setSelectedDifficulty(diff)}
                                     className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${selectedDifficulty === diff
-                                            ? 'border-red-500 bg-red-900/20 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
-                                            : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500 hover:bg-gray-750'
+                                        ? 'border-red-500 bg-red-900/20 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                                        : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500 hover:bg-gray-750'
                                         }`}
                                 >
                                     <span className="text-xl font-bold">{diff}</span>

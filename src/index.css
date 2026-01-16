@@ -21,28 +21,50 @@ body {
   min-height: 100vh;
 }
 
+@media (max-width: 768px) {
+  .game-title {
+    font-size: 1.5rem !important;
+  }
+
+  .game-title svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .controls-area button {
+    padding: 0.75rem 2rem !important;
+    font-size: 1rem !important;
+    width: 100%;
+  }
+}
+
 @media (max-height: 800px) {
   .main-header {
     margin-bottom: 0.5rem !important;
   }
+
   .game-title {
-    font-size: 2rem !important;
+    font-size: 1.5rem !important;
     margin-bottom: 0px !important;
   }
+
   .game-title svg {
     width: 24px;
     height: 24px;
   }
+
   .main-header p {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     margin-bottom: 0.25rem;
   }
+
   .controls-area {
     margin-top: 0.5rem !important;
   }
+
   .controls-area button {
     padding-top: 0.5rem !important;
     padding-bottom: 0.5rem !important;
-    font-size: 1.25rem !important;
+    font-size: 1rem !important;
   }
 }
