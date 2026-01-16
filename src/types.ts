@@ -1,4 +1,5 @@
 export type Player = 'RED' | 'BLUE';
+export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 export type MirrorType = 'MIRROR_A' | 'MIRROR_B'; // A: / (Bottom-Left to Top-Right), B: \ (Top-Left to Bottom-Right)
 export type CellContent = MirrorType | 'BLOCK' | 'SOURCE' | 'EMPTY' | 'WALL' | 'BOMB';
@@ -77,7 +78,7 @@ export type PlayerType = 'HUMAN' | 'AI';
 
 export interface AIConfiguration {
     version: string;
-    difficulty: 'Easy' | 'Medium' | 'Hard';
+    difficulty: Difficulty;
     scores: {
         WIN: number;
         LOSS: number;

@@ -3,11 +3,14 @@ import { Users, Monitor, Zap, HelpCircle, Play } from 'lucide-react';
 import { HowToPlayModal } from './HowToPlayModal';
 
 interface StartScreenProps {
-    onSelectMode: (mode: 'PVP' | 'PVE' | 'PLAYBACK') => void;
+    onSelectMode: (mode: 'PVP' | 'PVE' | 'PLAYBACK', difficulty?: import('../types').Difficulty) => void;
+    defaultDifficulty: import('../types').Difficulty;
 }
 
-export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode }) => {
+export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultDifficulty }) => {
     const [showHowToPlay, setShowHowToPlay] = useState(false);
+    const [showDifficultySelect, setShowDifficultySelect] = useState(false);
+    const [selectedDifficulty, setSelectedDifficulty] = useState<import('../types').Difficulty>(defaultDifficulty);
 
     // Check if training mode is enabled via feature flags
     const params = new URLSearchParams(window.location.search);
@@ -46,7 +49,10 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode }) => {
                     </button>
 
                     <button
-                        onClick={() => onSelectMode('PVE')}
+                        onClick={() => {
+                            setSelectedDifficulty(defaultDifficulty);
+                            setShowDifficultySelect(true);
+                        }}
                         className="flex flex-col items-center justify-center w-48 h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-red-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
                     >
                         <Monitor size={48} className="mb-4 text-red-500 group-hover:text-red-300" />
@@ -71,6 +77,46 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode }) => {
                 isOpen={showHowToPlay}
                 onClose={() => setShowHowToPlay(false)}
             />
+
+            {/* Difficulty Selection Modal */}
+            {showDifficultySelect && (
+                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-gray-900 border border-gray-700 p-8 rounded-2xl max-w-md w-full shadow-2xl transform scale-100 transition-all">
+                        <h2 className="text-3xl font-bold mb-6 text-white text-center">Select AI Smartness</h2>
+
+                        <div className="flex flex-col gap-3 mb-8">
+                            {(['Easy', 'Medium', 'Hard'] as const).map((diff) => (
+                                <button
+                                    key={diff}
+                                    onClick={() => setSelectedDifficulty(diff)}
+                                    className={`p-4 rounded-xl border-2 transition-all flex justify-between items-center ${selectedDifficulty === diff
+                                            ? 'border-red-500 bg-red-900/20 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+                                            : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500 hover:bg-gray-750'
+                                        }`}
+                                >
+                                    <span className="text-xl font-bold">{diff}</span>
+                                    {selectedDifficulty === diff && <Zap size={20} className="text-red-500 fill-red-500" />}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowDifficultySelect(false)}
+                                className="flex-1 py-3 px-6 rounded-xl bg-gray-800 text-gray-300 font-bold hover:bg-gray-700 transition-colors"
+                            >
+                                CANCEL
+                            </button>
+                            <button
+                                onClick={() => onSelectMode('PVE', selectedDifficulty)}
+                                className="flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:scale-105 transition-all"
+                            >
+                                START GAME
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

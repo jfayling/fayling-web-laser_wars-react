@@ -26,6 +26,7 @@ function App() {
   const { playPlaceSound, playRotateSound, playFireSound, playWinSound, playExplosionSound, playWallHitSound } = useSound();
   const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame } = useGameState(playExplosionSound, playWallHitSound);
   const { aiDifficulty } = useSettings();
+  const [activeAiDifficulty, setActiveAiDifficulty] = useState<import('./types').Difficulty>('Medium');
 
   const [isTrainingMode, setIsTrainingMode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -89,7 +90,6 @@ function App() {
   const handleRestart = () => {
     resetGame();
     setMoveHistory([]); // Clear history
-    setMoveHistory([]); // Clear history
     setIsSettingsOpen(false);
     setIsLogViewerOpen(false);
     playPlaceSound();
@@ -98,7 +98,6 @@ function App() {
   const handleQuit = () => {
     resetGame();
     setMoveHistory([]); // Clear history
-    setGameMode(null);
     setGameMode(null);
     setIsSettingsOpen(false);
     setIsLogViewerOpen(false);
@@ -114,7 +113,7 @@ function App() {
     // Build AI configuration if AI is playing
     const aiConfig: AIConfiguration | undefined = isPVE ? {
       version: AI_ENGINE_VERSION,
-      difficulty: aiDifficulty,
+      difficulty: activeAiDifficulty,
       scores: AI_CONFIG.scores as AIConfiguration['scores'],
       depths: AI_CONFIG.depths as AIConfiguration['depths']
     } : undefined;
@@ -157,7 +156,7 @@ function App() {
     if (gameMode === 'PVE' && gameState.turn === 'RED' && !gameState.winner && !gameState.isFiring) {
       // AI Turn (Red)
       const timeout = setTimeout(() => {
-        const move = calculateAiMove(gameState.grid, 'RED', aiDifficulty, moveHistory);
+        const move = calculateAiMove(gameState.grid, 'RED', activeAiDifficulty, moveHistory);
         if (move) {
           // Apply Move
           playPlaceSound(); // AI placed something
@@ -252,7 +251,7 @@ function App() {
 
       return () => clearTimeout(timeout);
     }
-  }, [gameMode, gameState.turn, gameState.winner, gameState.isFiring, gameState.grid, playPlaceSound, handleCellClick, playFireSound, fireLaser, aiDifficulty]);
+  }, [gameMode, gameState.turn, gameState.winner, gameState.isFiring, gameState.grid, playPlaceSound, handleCellClick, playFireSound, fireLaser, activeAiDifficulty]);
 
 
   // Handle Win/Loss Sounds
@@ -363,7 +362,17 @@ function App() {
   };
 
   if (!gameMode) {
-    return <StartScreen onSelectMode={setGameMode} />;
+    return (
+      <StartScreen
+        onSelectMode={(mode, difficulty) => {
+          setGameMode(mode);
+          if (mode === 'PVE' && difficulty) {
+            setActiveAiDifficulty(difficulty);
+          }
+        }}
+        defaultDifficulty={aiDifficulty}
+      />
+    );
   }
 
   if (gameMode === 'PLAYBACK') {
@@ -488,8 +497,13 @@ function App() {
         <div className="flex flex-col gap-4">
           <div className={`p-6 rounded-xl border transition-colors duration-300 ${gameState.turn === 'RED' ? 'bg-red-900/30 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
             <h2 className="text-xl font-semibold mb-4 text-red-500">
-              {gameMode === 'PVE' ? 'Computer (Red)' : 'Player 2 (Red)'}
+              {gameMode === 'PVE' ? `Computer (Red)` : 'Player 2 (Red)'}
             </h2>
+            {gameMode === 'PVE' && (
+              <div className="text-xs text-red-400/80 uppercase font-bold tracking-wider mb-2 bg-red-900/20 px-2 py-1 rounded inline-block">
+                Level: {activeAiDifficulty}
+              </div>
+            )}
             <div className={`text-sm ${gameState.turn === 'RED' ? 'text-red-300 font-bold' : 'text-gray-600'}`}>
               {gameState.turn === 'RED' ? (gameMode === 'PVE' ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
             </div>
