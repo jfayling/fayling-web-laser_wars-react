@@ -494,8 +494,8 @@ function App() {
         </button>
       )}
 
-      <header className="mb-8 text-center">
-        <h1 className="text-5xl font-bold mb-2 flex items-center justify-center gap-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
+      <header className="main-header mb-8 text-center">
+        <h1 className="game-title text-5xl font-bold mb-2 flex items-center justify-center gap-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
           <Zap size={48} className="text-yellow-400 fill-yellow-400" />
           LASER WARS
           <Zap size={48} className="text-yellow-400 fill-yellow-400" />
@@ -557,7 +557,7 @@ function App() {
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="controls-area mt-8">
         <button
           onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
           className={clsx(

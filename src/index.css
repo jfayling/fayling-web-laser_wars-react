@@ -20,3 +20,29 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+@media (max-height: 800px) {
+  .main-header {
+    margin-bottom: 0.5rem !important;
+  }
+  .game-title {
+    font-size: 2rem !important;
+    margin-bottom: 0px !important;
+  }
+  .game-title svg {
+    width: 24px;
+    height: 24px;
+  }
+  .main-header p {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+  }
+  .controls-area {
+    margin-top: 0.5rem !important;
+  }
+  .controls-area button {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    font-size: 1.25rem !important;
+  }
+}
