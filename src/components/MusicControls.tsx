@@ -7,85 +7,113 @@ export const MusicControls: React.FC = () => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const { musicVolume, musicEnabled } = useSettings();
 
-    useEffect(() => {
-        audioRef.current = new Audio(`${import.meta.env.BASE_URL}music/laserwars_1.mp3`);
-        audioRef.current.loop = true;
+    // Playlist State
+    const SONGS = [
+        'music/laserwars_1.mp3',
+        'music/laserwars_2.mp3'
+    ];
 
-        return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current = null;
-            }
-        };
+    const [playlist, setPlaylist] = useState<string[]>([]);
+    const [currentSongIndex, setCurrentSongIndex] = useState(0);
+
+    // Initial Shuffle
+    useEffect(() => {
+        const shuffled = [...SONGS].sort(() => Math.random() - 0.5);
+        setPlaylist(shuffled);
     }, []);
 
-    // Handle Volume changes
+    // Initialize Audio and Handle Song Changes
+    useEffect(() => {
+        if (playlist.length === 0) return;
+
+        const songUrl = `${import.meta.env.BASE_URL}${playlist[currentSongIndex]}`;
+
+        // Keep track if we should play immediately (if music was already playing or just enabled)
+        // Actually, if musicEnabled is true, we always try to play the new song in the playlist.
+        const shouldPlay = musicEnabled;
+
+        const audio = new Audio(songUrl);
+        audioRef.current = audio;
+
+        // Configure Audio
+        audio.volume = musicVolume;
+        audio.loop = false; // We handle looping manually via playlist
+
+        // Play Next Song when current one ends
+        const handleEnded = () => {
+            setCurrentSongIndex(prev => (prev + 1) % playlist.length);
+        };
+
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        audio.addEventListener('ended', handleEnded);
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+
+        // Attempt to play if enabled
+        if (shouldPlay) {
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Auto-play prevented by browser:", error);
+                    setIsPlaying(false);
+                });
+            }
+        }
+
+        return () => {
+            audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+            audio.pause();
+            audioRef.current = null;
+        };
+        // Resetting audio on song change or playlist init.
+        // We include musicEnabled in deps? 
+        // If we include musicEnabled, it RE-CREATES audio on toggle. 
+        // We WANT to avoid that if possible, but for playlist logic (new song) we need to recreate.
+        // If we want to Toggle Pause/Play without recreating, we need a separate effect.
+        // So REMOVE musicEnabled from here, and ONLY use it for initial check?
+        // But if I put `musicEnabled` in the condition `if (shouldPlay)` but NOT in deps, eslint warns.
+        // And if I don't put it in deps, it won't react to toggle.
+        // So I need a separate effect for Toggle.
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [playlist, currentSongIndex]);
+
+    // Handle Enable/Disable (Play/Pause) without recreating audio
+    useEffect(() => {
+        if (!audioRef.current) return;
+
+        if (musicEnabled) {
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.log("Auto-play prevented by browser (toggle):", error);
+                });
+            }
+        } else {
+            audioRef.current.pause();
+        }
+    }, [musicEnabled]);
+
+
+    // Handle Volume changes dynamically
     useEffect(() => {
         if (audioRef.current) {
             audioRef.current.volume = musicVolume;
         }
     }, [musicVolume]);
 
-    // Handle Enable/Disable setting changes
-    useEffect(() => {
-        if (!audioRef.current) return;
-
-        if (musicEnabled) {
-            // If settings allow music, try to play.
-            // Note: We don't want to force play if the USER deliberately paused via the button.
-            // HOWEVER, if the user just toggled the setting ON, they probably expect it to start.
-            // Let's assume enabling the setting resets the intent to "Play".
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => setIsPlaying(true))
-                    .catch(error => {
-                        console.log("Auto-play prevented by browser:", error);
-                        setIsPlaying(false);
-                    });
-            }
-        } else {
-            // If settings disable music, force pause.
-            audioRef.current.pause();
-            setIsPlaying(false);
-        }
-    }, [musicEnabled]);
-
     const toggleMusic = () => {
         if (!audioRef.current) return;
-
+        // This toggle allows local pause even if enabled in settings
         if (isPlaying) {
             audioRef.current.pause();
-            setIsPlaying(false);
         } else {
-            // If music is disabled in settings, hitting play shouldn't work OR should prompt?
-            // User requested behavior: "Click the music on/off icon... no longer works correctly"
-            // If setting provided by toggle is OFF, the button probably shouldn't do anything or should be visually disabled?
-            // "Add a toggle to the Music Volume setting... like SFX".
-            // If they click the main button, they want music.
-            // Let's allow it to play, which implicitly respects the fact they clicked it?
-            // BUT, our Effect enforces `!musicEnabled -> pause`.
-            // So if `musicEnabled` is false, and we click Play, the Effect will fight?
-            // No, the Effect depends on `[musicEnabled]`. It runs when `musicEnabled` CHANGES.
-            // If `musicEnabled` is strictly false, and we click Play, the Effect doesn't run.
-            // So the music WILL play.
-            // BUT, if we re-render effectively? No.
-            // Is it weird to have "Settings: Music OFF" but "Button: Music ON"?
-            // Yes.
-            // Maybe the Button should effectively be "Muted by Settings" if disabled?
-            // Or the Button ignores clicks if disabled?
-            // Let's assume if enabled, button works.
-
-            if (!musicEnabled) return; // Don't allow playing if disabled globally?
-
-            const playPromise = audioRef.current.play();
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => setIsPlaying(true))
-                    .catch(error => {
-                        console.error("Audio play failed:", error);
-                    });
-            }
+            if (!musicEnabled) return;
+            audioRef.current.play().catch(console.error);
         }
     };
 
