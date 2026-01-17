@@ -10,7 +10,9 @@ export const MusicControls: React.FC = () => {
     // Playlist State
     const SONGS = [
         'music/laserwars_1.mp3',
-        'music/laserwars_2.mp3'
+        'music/laserwars_2.mp3',
+        'music/laserwars_3.mp3',
+        'music/laserwars_4.mp3'
     ];
 
     const [playlist, setPlaylist] = useState<string[]>([]);
