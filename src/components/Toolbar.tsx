@@ -29,7 +29,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ selectedTool, onSelectTool, tu
                 onClick={() => !isDisabled && onSelectTool(tool)}
                 disabled={isDisabled}
                 className={clsx(
-                    "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 w-24 h-24",
+                    "flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 w-20 h-20",
                     isActive ? activeColor : (isDisabled ? disabledColor : inactiveColor)
                 )}
             >

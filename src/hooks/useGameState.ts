@@ -57,7 +57,8 @@ export const useGameState = (
         laserPath: [],
         activeCell: null,
         originalOrientation: null,
-        isNewPlacement: false
+        isNewPlacement: false,
+        originalCellContent: null
     });
 
     const [selectedTool, setSelectedTool] = useState<ToolType>('MIRROR');
@@ -108,7 +109,49 @@ export const useGameState = (
                     }
                     // Proceed to main logic
                 } else {
-                    return prev;
+                    // Clicking outside active cell (and not a valid move) -> DESELECT / UNDO
+                    // Restore original content if we were modifying something
+                    if (prev.originalCellContent !== undefined && prev.originalCellContent !== null) {
+                        const restoreGrid = prev.grid.map(row => row.map(c => ({ ...c })));
+                        const restoreCell = restoreGrid[prev.activeCell.y][prev.activeCell.x];
+                        restoreCell.content = prev.originalCellContent;
+                        // Restore owner if needed - usually safe to keep unless it was EMPTY
+                        if (prev.isNewPlacement) {
+                            restoreCell.owner = null;
+                        }
+                        // If it was a rotation, we might need originalOrientation, but content usually suffices for types
+                        // actually for MIRROR_A <-> MIRROR_B, content restore is enough.
+
+                        return {
+                            ...prev,
+                            grid: restoreGrid,
+                            activeCell: null,
+                            isNewPlacement: false,
+                            originalCellContent: null,
+                            validMoves: undefined,
+                            moveStartPos: null
+                        };
+                    } else if (prev.isNewPlacement) {
+                        // Just in case specific logic didn't set originalContent but said isNew
+                        const restoreGrid = prev.grid.map(row => row.map(c => ({ ...c })));
+                        restoreGrid[prev.activeCell.y][prev.activeCell.x].content = 'EMPTY';
+                        restoreGrid[prev.activeCell.y][prev.activeCell.x].owner = null;
+                        return {
+                            ...prev,
+                            grid: restoreGrid,
+                            activeCell: null,
+                            isNewPlacement: false,
+                            originalCellContent: null
+                        };
+                    }
+
+                    // Simple Deselect if no state to revert
+                    return {
+                        ...prev,
+                        activeCell: null,
+                        validMoves: undefined,
+                        moveStartPos: null
+                    };
                 }
             }
             const newGrid = prev.grid.map(row => row.map(cell => ({ ...cell })));
@@ -119,6 +162,7 @@ export const useGameState = (
             let newActiveCell = prev.activeCell;
             let newValidMoves: { x: number, y: number }[] | undefined = undefined;
             let newIsNewPlacement = prev.isNewPlacement;
+            let newOriginalCellContent = prev.originalCellContent;
 
 
             // If we are modifying a cell (creating a new active cell or editing existing active)
@@ -192,12 +236,19 @@ export const useGameState = (
                     if (isStartingNewMove) {
                         newActiveCell = { x, y };
                         newIsNewPlacement = true;
+                        newOriginalCellContent = 'EMPTY';
                     }
                 } else if (cell.content === 'MIRROR_A') {
                     cell.content = 'MIRROR_B';
                     if (isStartingNewMove) {
                         newActiveCell = { x, y };
                         newIsNewPlacement = false;
+                        if (!newOriginalCellContent) newOriginalCellContent = 'MIRROR_A';
+                    } else if (isModifyingActive && prev.originalCellContent === 'MIRROR_B') {
+                        // Returned to original state
+                        newActiveCell = null;
+                        newIsNewPlacement = false;
+                        newOriginalCellContent = null;
                     }
                 } else if (cell.content === 'MIRROR_B') {
                     // Logic: If it's a new placement (placed this turn), allow undo to Empty.
@@ -211,6 +262,12 @@ export const useGameState = (
                         if (isStartingNewMove) {
                             newActiveCell = { x, y };
                             newIsNewPlacement = false;
+                            if (!newOriginalCellContent) newOriginalCellContent = 'MIRROR_B';
+                        } else if (isModifyingActive && prev.originalCellContent === 'MIRROR_A') {
+                            // Returned to original state
+                            newActiveCell = null;
+                            newIsNewPlacement = false;
+                            newOriginalCellContent = null;
                         }
                     }
                 } else if (cell.content === 'WALL' || cell.content === 'BOMB') {
@@ -219,6 +276,7 @@ export const useGameState = (
                     if (isStartingNewMove) {
                         newActiveCell = { x, y };
                         newIsNewPlacement = true;
+                        newOriginalCellContent = cell.content; // WALL or BOMB
                     }
                 }
             } else if (currentTool === 'WALL') {
@@ -325,7 +383,8 @@ export const useGameState = (
                 laserPath: [],
                 turn: nextTurn,
                 activeCell: newActiveCell,
-                isNewPlacement: newIsNewPlacement
+                isNewPlacement: newIsNewPlacement,
+                originalCellContent: newOriginalCellContent
             };
         });
     }, [selectedTool]);
@@ -432,7 +491,8 @@ export const useGameState = (
                     validMoves: undefined,
                     moveStartPos: null,
                     originalOrientation: null, // Reset rotation intent
-                    isNewPlacement: false
+                    isNewPlacement: false,
+                    originalCellContent: null
                 };
             });
         }, delay);
@@ -494,7 +554,8 @@ export const useGameState = (
             originalOrientation: null,
             validMoves: undefined,
             moveStartPos: null,
-            isNewPlacement: false
+            isNewPlacement: false,
+            originalCellContent: null
         });
         setSelectedTool('MIRROR');
     }, []);

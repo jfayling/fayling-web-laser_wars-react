@@ -31,6 +31,7 @@ export interface GameState {
     moveStartPos?: Point | null;
     originalOrientation?: Direction | null;
     isNewPlacement?: boolean;
+    originalCellContent?: CellContent | null; // For undoing selection changes
 }
 
 export type ToolType = 'MIRROR' | 'WALL' | 'BOMB' | 'ERASER' | 'DEFUSE' | 'MOVE' | 'ROTATE_LEFT' | 'ROTATE_RIGHT';
