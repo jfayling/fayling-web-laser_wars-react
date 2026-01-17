@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Music, Volume2, VolumeX, Brain } from 'lucide-react';
+import { X, Music, Volume2, VolumeX, Brain, Cpu } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface SettingsModalProps {
@@ -110,8 +110,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, o
                     {/* AI Difficulty */}
                     <div className="space-y-3">
                         <div className="flex items-center gap-3 text-purple-400 mb-2">
-                            <Brain size={20} />
-                            <label className="font-semibold tracking-wide">AI SMARTNESS</label>
+                            <Cpu size={20} />
+                            <label className="font-semibold tracking-wide">TACTICAL ENGINE</label>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                             {(['Easy', 'Medium', 'Hard'] as const).map((level) => (

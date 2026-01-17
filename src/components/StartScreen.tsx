@@ -88,7 +88,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
             {showDifficultySelect && (
                 <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-gray-900 border border-gray-700 p-8 rounded-2xl max-w-md w-full shadow-2xl transform scale-100 transition-all">
-                        <h2 className="text-3xl font-bold mb-6 text-white text-center">Select AI Smartness</h2>
+                        <h2 className="text-3xl font-bold mb-6 text-white text-center">Select Tactical Engine</h2>
 
                         <div className="flex flex-col gap-3 mb-8">
                             {(['Easy', 'Medium', 'Hard'] as const).map((diff) => (
