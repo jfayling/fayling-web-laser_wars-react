@@ -100,7 +100,9 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                                         : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500 hover:bg-gray-750'
                                         }`}
                                 >
-                                    <span className="text-xl font-bold">{diff}</span>
+                                    <span className="text-xl font-bold">
+                                        {diff === 'Easy' ? 'DUMB' : diff === 'Medium' ? 'NORMAL' : 'SMART'}
+                                    </span>
                                     {selectedDifficulty === diff && <Zap size={20} className="text-red-500 fill-red-500" />}
                                 </button>
                             ))}
