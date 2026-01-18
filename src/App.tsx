@@ -213,19 +213,17 @@ function App() {
           }
 
           // Record AI Move Immediately (before async delay/state updates)
-          if (isTrainingMode) {
-            setMoveHistory(prev => [...prev, {
-              id: crypto.randomUUID(),
-              moveIndex: prev.length,
-              turn: gameState.turn,
-              actionType: move.tool,
-              x: move.x,
-              y: move.y,
-              timestamp: Date.now(),
-              details: move.tool === 'MOVE' ? 'AI_MOVE' : (isTerminal ? 'TERMINAL_ACTION' : undefined),
-              aiReasoning: move.reasoning
-            }]);
-          }
+          setMoveHistory(prev => [...prev, {
+            id: crypto.randomUUID(),
+            moveIndex: prev.length,
+            turn: gameState.turn,
+            actionType: move.tool,
+            x: move.x,
+            y: move.y,
+            timestamp: Date.now(),
+            details: move.tool === 'MOVE' ? 'AI_MOVE' : (isTerminal ? 'TERMINAL_ACTION' : undefined),
+            aiReasoning: move.reasoning
+          }]);
 
           if (isTerminal) {
             // Turn ends immediately, NO LASER PHASE.
@@ -250,17 +248,15 @@ function App() {
           }, 500);
         } else {
           // No move? Just fire.
-          if (isTrainingMode) {
-            setMoveHistory(prev => [...prev, {
-              id: crypto.randomUUID(),
-              moveIndex: prev.length,
-              turn: gameState.turn,
-              actionType: 'PASS',
-              x: -1,
-              y: -1,
-              timestamp: Date.now()
-            }]);
-          }
+          setMoveHistory(prev => [...prev, {
+            id: crypto.randomUUID(),
+            moveIndex: prev.length,
+            turn: gameState.turn,
+            actionType: 'PASS',
+            x: -1,
+            y: -1,
+            timestamp: Date.now()
+          }]);
           playFireSound();
           fireLaser();
         }
@@ -315,8 +311,8 @@ function App() {
 
     handleCellClick(x, y);
 
-    // Record terminal actions immediately in training mode
-    if (isTrainingMode && isTerminalAction && gameState.turn === 'BLUE') {
+    // Record terminal actions immediately
+    if (isTerminalAction && gameState.turn === 'BLUE') {
       setMoveHistory(prev => [...prev, {
         id: crypto.randomUUID(),
         moveIndex: prev.length,
@@ -356,50 +352,22 @@ function App() {
     // Determine if we should skip the laser simulation based on the action
     const skipSimulation = isNoFireAction;
 
-    if (isTrainingMode) {
-      // Determine what the user did. 
-      // If selectedTool is MOVE, and we have activeCell, it was a move.
-      // If activeCell is null, it was a PASS.
-      // But wait, if they clicked a Mirror and placed it, activeCell is set?
-      // Let's check logic: handleCellClick sets activeCell to the one modified.
-      // So if activeCell is not null, they did something. 
-      // Exception: If they just clicked a tool but didn't click board? activeCell is null.
-
-      let action: import('./types').ToolType | 'PASS' = 'PASS';
-      if (gameState.activeCell) {
-        // How to know which tool was used? 
-        // We can infer from the cell change or just use 'selectedTool'. 
-        // If they rotated, selectedTool might be MIRROR (click to rotate) or ROTATE_LEFT/RIGHT keys?
-        // Actually handleCellClick handles tool selection. 
-        // If we are here, the move is "committed" by firing.
-
-        // If originalOrientation is set, it was a ROTATION.
-        if (gameState.originalOrientation) {
-          // Check direction
-          action = 'ROTATE_RIGHT'; // approximation, or we need to check diff.
-          // Actually types.ts defines ROTATE_LEFT/RIGHT.
-          // let's just say 'ROTATE' or check current orientation vs original?
-          // For simplicity, let's use selectedTool if it makes sense, or default to generic.
-          if (selectedTool.startsWith('ROTATE')) action = selectedTool;
-          else action = 'ROTATE_RIGHT'; // default assumption for click-rotate
-        } else if (gameState.moveStartPos) {
-          action = 'MOVE'; // Should have been cleared though? 
-          // moveStartPos is cleared after move is done? No, it stays until fire? 
-          // logic: if successful move, moveStartPos stays validMoves cleared? 
-          // Let's look at useGameState: 
-          // After move: moveStartPos cleared NO. `newValidMoves = [prev.moveStartPos]`
-          // Wait, if move is done, activeCell is the *new* pos.
-          action = 'MOVE';
-        } else {
-          action = selectedTool; // Likely MIRROR, WALL, BOMB, DEFUSE, ERASER
-        }
+    // Always record move
+    let action: import('./types').ToolType | 'PASS' = 'PASS';
+    if (gameState.activeCell) {
+      if (gameState.originalOrientation) {
+        if (selectedTool.startsWith('ROTATE')) action = selectedTool;
+        else action = 'ROTATE_RIGHT';
+      } else if (gameState.moveStartPos) {
+        action = 'MOVE';
+      } else {
+        action = selectedTool;
       }
-
-      const rec = captureMove(gameState, action);
-      // Add firedLaser property
-      rec.firedLaser = !skipSimulation;
-      setMoveHistory(prev => [...prev, rec]);
     }
+
+    const rec = captureMove(gameState, action);
+    rec.firedLaser = !skipSimulation;
+    setMoveHistory(prev => [...prev, rec]);
 
     if (!skipSimulation) playFireSound();
     fireLaser(skipSimulation);
