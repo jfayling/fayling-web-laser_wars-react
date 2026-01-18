@@ -87,6 +87,8 @@ export interface AIConfiguration {
         DRAW: number;
         MATERIAL_MIRROR: number;
         MATERIAL_BOMB: number;
+        BOMB_SPAM_PENALTY: number;
+        REPETITIVE_BOMB_PENALTY: number;
         THREAT_BOMB_NEAR_SOURCE: number;
         LASER_BLOCKED: number;
         LASER_CLEAR_PATH: number;
@@ -107,7 +109,7 @@ export interface GameSession {
     winner: Player | null;
     winReason?: WinReason | null;
     moves: RecordedMove[];
-    mode: 'PVP' | 'PVE';
+    mode: 'PVP' | 'PVE' | 'SPECTATOR';
     playerBlue: PlayerType;
     playerRed: PlayerType;
     aiConfig?: AIConfiguration; // Only present when AI is playing

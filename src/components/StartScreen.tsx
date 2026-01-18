@@ -3,7 +3,7 @@ import { Users, Monitor, Zap, HelpCircle, Play } from 'lucide-react';
 import { HowToPlayModal } from './HowToPlayModal';
 
 interface StartScreenProps {
-    onSelectMode: (mode: 'PVP' | 'PVE' | 'PLAYBACK', difficulty?: import('../types').Difficulty) => void;
+    onSelectMode: (mode: 'PVP' | 'PVE' | 'SPECTATOR' | 'PLAYBACK', difficulty?: import('../types').Difficulty) => void;
     defaultDifficulty: import('../types').Difficulty;
 }
 
@@ -11,6 +11,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
     const [showHowToPlay, setShowHowToPlay] = useState(false);
     const [showDifficultySelect, setShowDifficultySelect] = useState(false);
     const [selectedDifficulty, setSelectedDifficulty] = useState<import('../types').Difficulty>(defaultDifficulty);
+    const [pendingMode, setPendingMode] = useState<'PVE' | 'SPECTATOR' | null>(null);
 
     // Check if training mode is enabled via feature flags
     const params = new URLSearchParams(window.location.search);
@@ -53,6 +54,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                     <button
                         onClick={() => {
                             setSelectedDifficulty(defaultDifficulty);
+                            setPendingMode('PVE');
                             setShowDifficultySelect(true);
                         }}
                         className="flex flex-row md:flex-col items-center justify-center md:justify-center p-4 md:p-0 gap-4 md:gap-0 w-full md:w-48 h-20 md:h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-red-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
@@ -61,6 +63,21 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                         <div className="text-left md:text-center">
                             <span className="text-xl md:text-2xl font-bold text-white block">PvE</span>
                             <span className="text-sm text-gray-400 mt-0 md:mt-2 block">Vs Computer</span>
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            setSelectedDifficulty(defaultDifficulty);
+                            setPendingMode('SPECTATOR');
+                            setShowDifficultySelect(true);
+                        }}
+                        className="flex flex-row md:flex-col items-center justify-center md:justify-center p-4 md:p-0 gap-4 md:gap-0 w-full md:w-48 h-20 md:h-48 bg-gray-800 rounded-2xl border-2 border-transparent hover:border-yellow-500 hover:bg-gray-800/80 transition-all hover:scale-105 group"
+                    >
+                        <Zap size={32} className="md:w-12 md:h-12 md:mb-4 text-yellow-500 group-hover:text-yellow-300" />
+                        <div className="text-left md:text-center">
+                            <span className="text-xl md:text-2xl font-bold text-white block">SPECTATOR</span>
+                            <span className="text-sm text-gray-400 mt-0 md:mt-2 block">AI vs AI</span>
                         </div>
                     </button>
 
@@ -116,7 +133,11 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                                 CANCEL
                             </button>
                             <button
-                                onClick={() => onSelectMode('PVE', selectedDifficulty)}
+                                onClick={() => {
+                                    if (pendingMode) {
+                                        onSelectMode(pendingMode, selectedDifficulty);
+                                    }
+                                }}
                                 className="flex-1 py-3 px-6 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 text-white font-bold hover:shadow-[0_0_20px_rgba(220,38,38,0.5)] hover:scale-105 transition-all"
                             >
                                 START GAME

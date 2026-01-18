@@ -102,12 +102,50 @@ const detectActionLoop = (moveHistory: RecordedMove[], aiPlayer: Player, actionT
     return false;
 };
 
+/**
+ * Detects if the AI is engaging in repetitive action types (e.g. constant bombing).
+ * Returns true if the last 4 moves by this AI were all of actionType.
+ */
+const detectRepetitiveAction = (moveHistory: RecordedMove[], aiPlayer: Player, actionType: ToolType): boolean => {
+    // Need at least 2 previous moves by me (implies at least 3-4 total moves) to detect a pattern of 3?
+    // Let's settle on: If last 2 moves by ME were ACTION, and I'm about to do it again (total 3), that's repetitive.
+    // Actually, user compliant was "always used a BOMB".
+    // So if last move was BOMB, and I want to BOMB again?
+    // Let's try: If last 2 AI moves were BOMB.
+
+    let aiMoveCount = 0;
+    let consecutiveMatch = 0;
+
+    // Scan backwards
+    for (let i = moveHistory.length - 1; i >= 0; i--) {
+        const move = moveHistory[i];
+        if (move.turn === aiPlayer) {
+            aiMoveCount++;
+            if (move.actionType === actionType) {
+                consecutiveMatch++;
+            } else {
+                break; // Sequence broken
+            }
+        }
+        if (aiMoveCount >= 2) break; // Check last 2 moves
+    }
+
+    // If last 2 moves were this action, we are entering repetitive territory
+    return consecutiveMatch >= 2;
+};
+
 // --- Alpha-Beta Search ---
 
 const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: Player, moveHistory: RecordedMove[] = []): AiMove | null => {
     const startTime = performance.now();
     const moves = generateMoves(rootState);
     if (moves.length === 0) return null;
+
+    // Check for repetitive bombing
+    const isRepetitiveBombing = detectRepetitiveAction(moveHistory, aiPlayer, 'BOMB');
+    if (isRepetitiveBombing) {
+        console.log(`[AI-LOOP-DETECTION] Repetitive BOMBing detected. Applying penalty.`);
+    }
 
     let bestMoves: AiMove[] = [];
     let alpha = -Infinity;
@@ -119,7 +157,14 @@ const findBestMoveAlphaBeta = (rootState: AIState, maxDepth: number, aiPlayer: P
 
     for (const move of moves) {
         const nextState = applyMoveAndResolve(rootState, move);
-        const val = alphaBeta(nextState, maxDepth - 1, alpha, beta, false, aiPlayer);
+
+        let val = alphaBeta(nextState, maxDepth - 1, alpha, beta, false, aiPlayer);
+
+        // Apply repetitive penalty at the root level logic
+        if (move.tool === 'BOMB' && isRepetitiveBombing) {
+            val += AI_CONFIG.scores.REPETITIVE_BOMB_PENALTY;
+            if (DebugState.enabled) console.log(`[AI-TRACE] Applied Repetitive Bomb Penalty to move at (${move.x},${move.y}). New score: ${val}`);
+        }
 
         // Store move with score
         allMovesWithScores.push({ move, score: val });
@@ -651,10 +696,8 @@ const evaluateLaserPath = (grid: Cell[][], player: Player, laserResult: any): nu
         score += AI_CONFIG.scores.LASER_BLOCKED;
     }
 
-    // Reward hitting the enemy source (should be caught by terminal evaluation, but good to reinforce)
-    if (hit && hitType === 'SOURCE') {
-        score += AI_CONFIG.scores.LASER_NEAR_ENEMY * 5; // Very high bonus
-    }
+    // HIT SOURCE check removed - handled by evaluateTerminal (Winning is the ultimate reward)
+    // If we add points here, we risk overvaluing "hitting" without "destroying".
 
     // Reward laser paths that get close to the enemy source
     if (enemySourceX !== -1 && path.length > 0) {

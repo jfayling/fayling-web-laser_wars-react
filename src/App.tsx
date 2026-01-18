@@ -13,12 +13,13 @@ import { Settings as SettingsIcon } from 'lucide-react';
 import { useSettings } from './contexts/SettingsContext';
 import { SettingsModal } from './components/SettingsModal';
 import { LogViewerModal } from './components/LogViewerModal';
+import { MoveList } from './components/MoveList';
 import { FileText } from 'lucide-react';
 import type { RecordedMove, GameSession, AIConfiguration } from './types';
 import { AI_ENGINE_VERSION } from './logic/aiLogic';
 import AI_CONFIG from './logic/aiConfig.json';
 
-export type GameMode = 'PVP' | 'PVE' | 'PLAYBACK' | null;
+export type GameMode = 'PVP' | 'PVE' | 'SPECTATOR' | 'PLAYBACK' | null;
 
 function App() {
   const [gameMode, setGameMode] = useState<GameMode>(null);
@@ -105,13 +106,14 @@ function App() {
 
   const generateSessionData = (): GameSession => {
     const isPVE = gameMode === 'PVE';
+    const isSpectator = gameMode === 'SPECTATOR';
 
     // Determine player types based on game mode
-    const playerBlue = 'HUMAN';
-    const playerRed = isPVE ? 'AI' : 'HUMAN';
+    const playerBlue = isSpectator ? 'AI' : 'HUMAN';
+    const playerRed = (isPVE || isSpectator) ? 'AI' : 'HUMAN';
 
     // Build AI configuration if AI is playing
-    const aiConfig: AIConfiguration | undefined = isPVE ? {
+    const aiConfig: AIConfiguration | undefined = (isPVE || isSpectator) ? {
       version: AI_ENGINE_VERSION,
       difficulty: activeAiDifficulty,
       scores: AI_CONFIG.scores as AIConfiguration['scores'],
@@ -120,7 +122,7 @@ function App() {
 
     return {
       date: new Date().toISOString(),
-      mode: (gameMode === 'PVP' || gameMode === 'PVE') ? gameMode : 'PVP',
+      mode: (gameMode === 'PVP' || gameMode === 'PVE' || gameMode === 'SPECTATOR') ? gameMode : 'PVP',
       winner: gameState.winner,
       winReason: gameState.winReason,
       moves: moveHistory,
@@ -153,10 +155,13 @@ function App() {
 
   // AI Logic
   useEffect(() => {
-    if (gameMode === 'PVE' && gameState.turn === 'RED' && !gameState.winner && !gameState.isFiring) {
-      // AI Turn (Red)
+    const isAiTurn = (gameMode === 'PVE' && gameState.turn === 'RED') ||
+      (gameMode === 'SPECTATOR');
+
+    if (isAiTurn && !gameState.winner && !gameState.isFiring) {
+      // AI Turn
       const timeout = setTimeout(() => {
-        const move = calculateAiMove(gameState.grid, 'RED', activeAiDifficulty, moveHistory);
+        const move = calculateAiMove(gameState.grid, gameState.turn, activeAiDifficulty, moveHistory);
         if (move) {
           // Apply Move
           playPlaceSound(); // AI placed something
@@ -167,7 +172,7 @@ function App() {
             let sourceY = -1;
             for (let y = 0; y < gameState.grid.length; y++) {
               for (let x = 0; x < gameState.grid[0].length; x++) {
-                if (gameState.grid[y][x].content === 'SOURCE' && gameState.grid[y][x].owner === 'RED') {
+                if (gameState.grid[y][x].content === 'SOURCE' && gameState.grid[y][x].owner === gameState.turn) {
                   sourceX = x;
                   sourceY = y;
                   break;
@@ -201,7 +206,7 @@ function App() {
           } else if (move.tool === 'BOMB') {
             // Only Offensive Bomb (destroying asset) is terminal
             const cell = gameState.grid[move.y][move.x];
-            if (cell.owner && cell.owner !== 'RED') isTerminal = true;
+            if (cell.owner && cell.owner !== gameState.turn) isTerminal = true;
           }
 
           // Record AI Move Immediately (before async delay/state updates)
@@ -209,7 +214,7 @@ function App() {
             setMoveHistory(prev => [...prev, {
               id: crypto.randomUUID(),
               moveIndex: prev.length,
-              turn: 'RED',
+              turn: gameState.turn,
               actionType: move.tool,
               x: move.x,
               y: move.y,
@@ -246,7 +251,7 @@ function App() {
             setMoveHistory(prev => [...prev, {
               id: crypto.randomUUID(),
               moveIndex: prev.length,
-              turn: 'RED',
+              turn: gameState.turn,
               actionType: 'PASS',
               x: -1,
               y: -1,
@@ -273,8 +278,8 @@ function App() {
   const onCellClickWrapper = (x: number, y: number) => {
     if (gameState.winner || gameState.isFiring) return;
 
-    // Prevent clicking during AI turn in PvE
-    if (gameMode === 'PVE' && gameState.turn === 'RED') return;
+    // Prevent clicking during AI turn in PvE or Spectator
+    if ((gameMode === 'PVE' && gameState.turn === 'RED') || gameMode === 'SPECTATOR') return;
 
     const cell = gameState.grid[y][x];
     const canInteract = cell.content === 'EMPTY' || cell.owner === gameState.turn;
@@ -402,7 +407,7 @@ function App() {
       <StartScreen
         onSelectMode={(mode, difficulty) => {
           setGameMode(mode);
-          if (mode === 'PVE' && difficulty) {
+          if ((mode === 'PVE' || mode === 'SPECTATOR') && difficulty) {
             setActiveAiDifficulty(difficulty);
           }
         }}
@@ -476,7 +481,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-start pt-4 md:pt-8 p-4">
       <button
         onClick={() => setIsSettingsOpen(true)}
         className="fixed top-4 left-4 z-50 p-3 bg-gray-900/80 border border-gray-700 text-gray-400 rounded-full hover:bg-gray-800 hover:text-white hover:border-gray-500 transition-all shadow-lg backdrop-blur-sm"
@@ -494,7 +499,7 @@ function App() {
         </button>
       )}
 
-      <header className="main-header mb-8 text-center">
+      <header className="main-header mb-4 text-center">
         <h1 className="game-title text-5xl font-bold mb-2 flex items-center justify-center gap-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-500">
           <Zap size={48} className="text-yellow-400 fill-yellow-400" />
           LASER WARS
@@ -502,7 +507,7 @@ function App() {
         </h1>
         <p className="text-gray-400">Turn-based strategy. Defend your source. Destroy the enemy.</p>
         <div className="mt-2 text-sm text-gray-500 font-bold uppercase tracking-widest border border-gray-800 inline-block px-3 py-1 rounded-full">
-          Mode: {gameMode === 'PVP' ? 'Versus Player' : 'Versus Computer'}
+          Mode: {gameMode === 'PVP' ? 'Versus Player' : (gameMode === 'SPECTATOR' ? 'Spectator Mode' : 'Versus Computer')}
         </div>
       </header>
 
@@ -525,24 +530,32 @@ function App() {
                   isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
                     "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
               )}
-              disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED'))}
+              disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED') || gameMode === 'SPECTATOR')}
             >
               {gameState.winner ? 'SHOW RESULTS' :
                 (gameState.isFiring ? 'FIRING...' :
-                  (isNoFireAction ? 'DONE' : 'FIRE LASER'))}
+                  (gameMode === 'SPECTATOR' ? 'SPECTATING...' :
+                    (isNoFireAction ? 'DONE' : 'FIRE LASER')))}
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 w-full max-w-6xl justify-center">
+          <div className="flex flex-col md:flex-row items-start gap-4 md:gap-12 w-full max-w-6xl justify-center">
             {/* Player 1 (Blue) */}
-            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-auto order-2 md:order-1">
+            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-80 md:shrink-0 order-2 md:order-1">
               <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'BLUE' ? 'bg-blue-900/30 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
-                <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-blue-400">Player 1 (Blue)</h2>
+                <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-blue-400">
+                  {gameMode === 'SPECTATOR' ? 'Computer (Blue)' : 'Player 1 (Blue)'}
+                </h2>
+                {gameMode === 'SPECTATOR' && (
+                  <div className="text-[10px] md:text-xs text-blue-400/80 uppercase font-bold tracking-wider md:mb-2 bg-blue-900/20 px-2 py-1 rounded inline-block ml-2 md:ml-0">
+                    Level: {activeAiDifficulty}
+                  </div>
+                )}
                 <div className={`text-xs md:text-sm ${gameState.turn === 'BLUE' ? 'text-blue-300 font-bold' : 'text-gray-600'}`}>
-                  {gameState.turn === 'BLUE' ? 'PLANNING...' : 'WAITING'}
+                  {gameState.turn === 'BLUE' ? (gameMode === 'SPECTATOR' ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
                 </div>
               </div>
-              {gameState.turn === 'BLUE' && (
+              {gameState.turn === 'BLUE' && gameMode !== 'SPECTATOR' && (
                 <Toolbar
                   selectedTool={selectedTool}
                   onSelectTool={handleToolSelect}
@@ -552,6 +565,12 @@ function App() {
                   disabledTools={disabledTools}
                 />
               )}
+              {gameMode !== 'SPECTATOR' && (
+                <MoveList moves={moveHistory.filter(m => m.turn === 'BLUE')} title="Moves" isRed={false} />
+              )}
+              {gameMode === 'SPECTATOR' && (
+                <MoveList moves={moveHistory.filter(m => m.turn === 'BLUE')} title="Blue AI Moves" isRed={false} />
+              )}
             </div>
 
             <div className="order-1 md:order-2">
@@ -559,18 +578,18 @@ function App() {
             </div>
 
             {/* Player 2 (Red) */}
-            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-auto order-3">
+            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-80 md:shrink-0 order-3">
               <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'RED' ? 'bg-red-900/30 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
                 <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-red-500">
-                  {gameMode === 'PVE' ? `Computer (Red)` : 'Player 2 (Red)'}
+                  {gameMode === 'PVE' || gameMode === 'SPECTATOR' ? `Computer (Red)` : 'Player 2 (Red)'}
                 </h2>
-                {gameMode === 'PVE' && (
+                {(gameMode === 'PVE' || gameMode === 'SPECTATOR') && (
                   <div className="text-[10px] md:text-xs text-red-400/80 uppercase font-bold tracking-wider md:mb-2 bg-red-900/20 px-2 py-1 rounded inline-block ml-2 md:ml-0">
                     Level: {activeAiDifficulty}
                   </div>
                 )}
                 <div className={`text-xs md:text-sm ${gameState.turn === 'RED' ? 'text-red-300 font-bold' : 'text-gray-600'}`}>
-                  {gameState.turn === 'RED' ? (gameMode === 'PVE' ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
+                  {gameState.turn === 'RED' ? ((gameMode === 'PVE' || gameMode === 'SPECTATOR') ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
                 </div>
               </div>
               {gameState.turn === 'RED' && gameMode === 'PVP' && (
@@ -583,6 +602,7 @@ function App() {
                   disabledTools={disabledTools}
                 />
               )}
+              <MoveList moves={moveHistory.filter(m => m.turn === 'RED')} title={gameMode === 'PVE' || gameMode === 'SPECTATOR' ? "Red AI Moves" : "Moves"} isRed={true} />
             </div>
           </div>
 
