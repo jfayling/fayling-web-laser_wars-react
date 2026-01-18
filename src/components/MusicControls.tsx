@@ -85,7 +85,7 @@ export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = fal
         // And if I don't put it in deps, it won't react to toggle.
         // So I need a separate effect for Toggle.
 
-    }, [playlist, currentSongIndex, musicEnabled, isGamePaused]);
+    }, [playlist, currentSongIndex]);
 
     // Handle Enable/Disable and Game Pause without recreating audio
     useEffect(() => {

@@ -90,6 +90,7 @@ export interface AIConfiguration {
         BOMB_SPAM_PENALTY: number;
         REPETITIVE_BOMB_PENALTY: number;
         THREAT_BOMB_NEAR_SOURCE: number;
+        THREAT_LASER_BOMB_SUICIDE: number;
         LASER_BLOCKED: number;
         LASER_CLEAR_PATH: number;
         LASER_NEAR_ENEMY: number;

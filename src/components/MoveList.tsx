@@ -7,9 +7,10 @@ interface MoveListProps {
     title: string;
     className?: string;
     isRed: boolean;
+    fillHeight?: boolean;
 }
 
-export const MoveList: React.FC<MoveListProps> = ({ moves, title, className, isRed }) => {
+export const MoveList: React.FC<MoveListProps> = ({ moves, title, className, isRed, fillHeight }) => {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when moves update
@@ -20,7 +21,7 @@ export const MoveList: React.FC<MoveListProps> = ({ moves, title, className, isR
     }, [moves]);
 
     return (
-        <div className={clsx("flex flex-col w-full max-w-xs", className)}>
+        <div className={clsx("flex flex-col w-full max-w-xs", fillHeight && "h-full min-h-0", className)}>
             <div className={clsx(
                 "text-xs font-bold uppercase tracking-widest mb-2 px-1",
                 isRed ? "text-red-400" : "text-blue-400"
@@ -31,8 +32,9 @@ export const MoveList: React.FC<MoveListProps> = ({ moves, title, className, isR
             <div
                 ref={scrollRef}
                 className={clsx(
-                    "rounded-xl border h-32 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1 shadow-inner",
+                    "rounded-xl border overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1 shadow-inner",
                     "bg-gray-900/80 backdrop-blur-sm",
+                    fillHeight ? "flex-1 min-h-0 h-full" : "h-32",
                     isRed
                         ? "border-red-900/30 scrollbar-track-red-950/50 scrollbar-thumb-red-900/50"
                         : "border-blue-900/30 scrollbar-track-blue-950/50 scrollbar-thumb-blue-900/50"

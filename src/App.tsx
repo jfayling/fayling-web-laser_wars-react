@@ -565,9 +565,18 @@ function App() {
             )}
           </div>
 
-          <div className="flex flex-col md:flex-row items-start gap-4 md:gap-12 w-full max-w-6xl justify-center">
+          <div
+            className={clsx(
+              "flex flex-col md:flex-row gap-4 md:gap-12 w-full max-w-6xl justify-center transition-all duration-300",
+              gameMode === 'SPECTATOR' ? "md:items-stretch" : "items-start"
+            )}
+            style={gameMode === 'SPECTATOR' ? { height: 'calc(min(calc(100vw - 4rem), 600px, 65vh) + 2rem + 2px)' } : undefined}
+          >
             {/* Player 1 (Blue) */}
-            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-80 md:shrink-0 order-2 md:order-1">
+            <div className={clsx(
+              "flex flex-col gap-2 md:gap-4 w-full md:w-80 md:shrink-0 order-2 md:order-1",
+              gameMode === 'SPECTATOR' && "h-full min-h-0"
+            )}>
               <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'BLUE' ? 'bg-blue-900/30 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
                 <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-blue-400">
                   {gameMode === 'SPECTATOR' ? 'Computer (Blue)' : 'Player 1 (Blue)'}
@@ -595,7 +604,7 @@ function App() {
                 <MoveList moves={moveHistory.filter(m => m.turn === 'BLUE')} title="Moves" isRed={false} />
               )}
               {gameMode === 'SPECTATOR' && (
-                <MoveList moves={moveHistory.filter(m => m.turn === 'BLUE')} title="Blue AI Moves" isRed={false} />
+                <MoveList moves={moveHistory.filter(m => m.turn === 'BLUE')} title="Blue AI Moves" isRed={false} fillHeight className="flex-1" />
               )}
             </div>
 
@@ -604,7 +613,10 @@ function App() {
             </div>
 
             {/* Player 2 (Red) */}
-            <div className="flex flex-col gap-2 md:gap-4 w-full md:w-80 md:shrink-0 order-3">
+            <div className={clsx(
+              "flex flex-col gap-2 md:gap-4 w-full md:w-80 md:shrink-0 order-3",
+              gameMode === 'SPECTATOR' && "h-full min-h-0"
+            )}>
               <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'RED' ? 'bg-red-900/30 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
                 <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-red-500">
                   {gameMode === 'PVE' || gameMode === 'SPECTATOR' ? `Computer (Red)` : 'Player 2 (Red)'}
@@ -628,7 +640,13 @@ function App() {
                   disabledTools={disabledTools}
                 />
               )}
-              <MoveList moves={moveHistory.filter(m => m.turn === 'RED')} title={gameMode === 'PVE' || gameMode === 'SPECTATOR' ? "Red AI Moves" : "Moves"} isRed={true} />
+              <MoveList
+                moves={moveHistory.filter(m => m.turn === 'RED')}
+                title={gameMode === 'PVE' || gameMode === 'SPECTATOR' ? "Red AI Moves" : "Moves"}
+                isRed={true}
+                fillHeight={gameMode === 'SPECTATOR'}
+                className={gameMode === 'SPECTATOR' ? "flex-1" : undefined}
+              />
             </div>
           </div>
 
