@@ -389,13 +389,23 @@ export const useGameState = (
         });
     }, [selectedTool]);
 
-    const explodeBomb = (grid: Cell[][], bombX: number, bombY: number): Player | null => {
+    const explodeBomb = (grid: Cell[][], bombX: number, bombY: number, explodedBombs: Set<string> = new Set()): Player | null => {
         let detectedWinner: Player | null = null;
+        const key = `${bombX},${bombY}`;
+        if (explodedBombs.has(key)) return null;
+        explodedBombs.add(key);
+
         // Destroy 3x3 area
         for (let y = bombY - 1; y <= bombY + 1; y++) {
             for (let x = bombX - 1; x <= bombX + 1; x++) {
                 if (y >= 0 && y < BOARD_SIZE && x >= 0 && x < BOARD_SIZE) {
                     const cell = grid[y][x];
+
+                    if (cell.content === 'BOMB' && !explodedBombs.has(`${x},${y}`)) {
+                        // Chain reaction!
+                        const nestedWinner = explodeBomb(grid, x, y, explodedBombs);
+                        if (nestedWinner) detectedWinner = nestedWinner;
+                    }
 
                     if (cell.content === 'SOURCE') {
                         // If a source is hit, the OWNER of that source LOSES.

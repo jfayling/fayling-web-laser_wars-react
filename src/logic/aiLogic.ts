@@ -4,7 +4,7 @@ import AI_CONFIG from './aiConfig.json';
 import { DebugState } from './debugState';
 
 // AI Engine Version - increment this whenever AI logic changes
-export const AI_ENGINE_VERSION = '1.2.0';
+export const AI_ENGINE_VERSION = '1.3.0';
 
 export interface AiMove {
     x: number;
@@ -614,14 +614,24 @@ const applyMoveAndResolve = (state: AIState, move: AiMove): AIState => {
     };
 };
 
-const applyBlast = (grid: Cell[][], bombX: number, bombY: number) => {
+const applyBlast = (grid: Cell[][], bombX: number, bombY: number, explodedBombs: Set<string> = new Set()) => {
+    const key = `${bombX},${bombY}`;
+    if (explodedBombs.has(key)) return;
+    explodedBombs.add(key);
+
     if (DebugState.enabled) console.log(`[AI-TRACE] applyBlast called at ${bombX},${bombY}`);
     const boardSize = grid.length;
+
     for (let by = bombY - 1; by <= bombY + 1; by++) {
         for (let bx = bombX - 1; bx <= bombX + 1; bx++) {
             if (bx >= 0 && bx < boardSize && by >= 0 && by < boardSize) {
                 const cell = grid[by][bx];
-                if (cell.content !== 'EMPTY') {
+
+                if (cell.content === 'BOMB' && !explodedBombs.has(`${bx},${by}`)) {
+                    applyBlast(grid, bx, by, explodedBombs);
+                }
+
+                if (cell.content !== 'EMPTY' && cell.content !== 'BLOCK') {
                     if (bx === 9 && by === 9) {
                         // console.log(`[AI-TRACE] BLAST HIT (9,9)! Destroying ${cell.content}`);
                     }
@@ -739,12 +749,7 @@ const detectLaserBombThreat = (grid: Cell[][], player: Player, laserResult: any)
     // Get the bomb position (last point in the path)
     const bombPos = path[path.length - 1];
 
-    // Check if this bomb belongs to the opponent
-    // const bombCell = grid[bombPos.y][bombPos.x];
-    // REMOVE: if (bombCell.owner === player) return 0;
-    // We treat OWN bombs as threats too if they are near our source!
-
-    // Find the AI's source position
+    // Find the AI's source position INITIALLY to see if we even have one
     let sourceX = -1;
     let sourceY = -1;
 
@@ -763,13 +768,19 @@ const detectLaserBombThreat = (grid: Cell[][], player: Player, laserResult: any)
         return 0; // No source found (shouldn't happen)
     }
 
-    // Check if the source is within the bomb's explosion radius (3x3 area)
-    const distanceX = Math.abs(sourceX - bombPos.x);
-    const distanceY = Math.abs(sourceY - bombPos.y);
+    // SIMULATE THE EXPLOSION
+    // We must clone the grid to not affect the actual AI state analysis
+    const simGrid = cloneGrid(grid);
 
-    // Bomb explosion affects cells within 1 cell in all directions (3x3 grid)
-    if (distanceX <= 1 && distanceY <= 1) {
-        console.log(`[AI-THREAT] CRITICAL: Laser will hit bomb at (${bombPos.x},${bombPos.y}) which will destroy source at (${sourceX},${sourceY})!`);
+    // Apply the blast (recursive)
+    applyBlast(simGrid, bombPos.x, bombPos.y);
+
+    // Check if our source survived
+    const sourceCell = simGrid[sourceY][sourceX];
+    if (sourceCell.content !== 'SOURCE' || sourceCell.owner !== player) {
+        if (DebugState.enabled) {
+            console.log(`[AI-THREAT] CRITICAL: Laser hit on bomb at (${bombPos.x},${bombPos.y}) triggers chain reaction destroying source at (${sourceX},${sourceY})!`);
+        }
         score += AI_CONFIG.scores.THREAT_LASER_BOMB_SUICIDE;
     }
 
