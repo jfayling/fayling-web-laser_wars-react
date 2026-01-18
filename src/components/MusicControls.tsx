@@ -2,7 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
 
-export const MusicControls: React.FC = () => {
+interface MusicControlsProps {
+    isGamePaused?: boolean;
+}
+
+export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = false }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const { musicVolume, musicEnabled } = useSettings();
@@ -30,9 +34,9 @@ export const MusicControls: React.FC = () => {
 
         const songUrl = `${import.meta.env.BASE_URL}${playlist[currentSongIndex]}`;
 
-        // Keep track if we should play immediately (if music was already playing or just enabled)
-        // Actually, if musicEnabled is true, we always try to play the new song in the playlist.
-        const shouldPlay = musicEnabled;
+        // Keep track if we should play immediately
+        // Play only if music enabled AND game is NOT paused
+        const shouldPlay = musicEnabled && !isGamePaused;
 
         const audio = new Audio(songUrl);
         audioRef.current = audio;
@@ -81,24 +85,23 @@ export const MusicControls: React.FC = () => {
         // And if I don't put it in deps, it won't react to toggle.
         // So I need a separate effect for Toggle.
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [playlist, currentSongIndex]);
+    }, [playlist, currentSongIndex, musicEnabled, isGamePaused]);
 
-    // Handle Enable/Disable (Play/Pause) without recreating audio
+    // Handle Enable/Disable and Game Pause without recreating audio
     useEffect(() => {
         if (!audioRef.current) return;
 
-        if (musicEnabled) {
+        if (musicEnabled && !isGamePaused) {
             const playPromise = audioRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
-                    console.log("Auto-play prevented by browser (toggle):", error);
+                    console.log("Auto-play prevented by browser (toggle/resume):", error);
                 });
             }
         } else {
             audioRef.current.pause();
         }
-    }, [musicEnabled]);
+    }, [musicEnabled, isGamePaused]);
 
 
     // Handle Volume changes dynamically

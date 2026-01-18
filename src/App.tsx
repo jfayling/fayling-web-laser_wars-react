@@ -14,7 +14,7 @@ import { useSettings } from './contexts/SettingsContext';
 import { SettingsModal } from './components/SettingsModal';
 import { LogViewerModal } from './components/LogViewerModal';
 import { MoveList } from './components/MoveList';
-import { FileText } from 'lucide-react';
+import { FileText, Pause, Play, LogOut } from 'lucide-react';
 import type { RecordedMove, GameSession, AIConfiguration } from './types';
 import { AI_ENGINE_VERSION } from './logic/aiLogic';
 import AI_CONFIG from './logic/aiConfig.json';
@@ -38,6 +38,7 @@ function App() {
   const [moveHistory, setMoveHistory] = useState<RecordedMove[]>([]);
   const [playbackSession, setPlaybackSession] = useState<GameSession | null>(null);
   const [isWinModalVisible, setIsWinModalVisible] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     if (gameState.winner) {
@@ -159,6 +160,8 @@ function App() {
       (gameMode === 'SPECTATOR');
 
     if (isAiTurn && !gameState.winner && !gameState.isFiring) {
+      if (isPaused) return;
+
       // AI Turn
       const timeout = setTimeout(() => {
         const move = calculateAiMove(gameState.grid, gameState.turn, activeAiDifficulty, moveHistory);
@@ -265,7 +268,7 @@ function App() {
 
       return () => clearTimeout(timeout);
     }
-  }, [gameMode, gameState.turn, gameState.winner, gameState.isFiring, gameState.grid, playPlaceSound, handleCellClick, playFireSound, fireLaser, activeAiDifficulty]);
+  }, [gameMode, gameState.turn, gameState.winner, gameState.isFiring, gameState.grid, playPlaceSound, handleCellClick, playFireSound, fireLaser, activeAiDifficulty, isPaused]);
 
 
   // Handle Win/Loss Sounds
@@ -521,22 +524,45 @@ function App() {
         <div className="flex flex-col md:flex-col-reverse w-full items-center gap-4 md:gap-8">
 
           {/* Controls Area */}
-          <div className="controls-area w-full flex justify-center z-10">
-            <button
-              onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
-              className={clsx(
-                "px-8 py-3 md:px-12 md:py-4 rounded-full font-bold text-lg md:text-2xl tracking-wider text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg",
-                gameState.winner ? "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]" :
-                  isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
-                    "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
-              )}
-              disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED') || gameMode === 'SPECTATOR')}
-            >
-              {gameState.winner ? 'SHOW RESULTS' :
-                (gameState.isFiring ? 'FIRING...' :
-                  (gameMode === 'SPECTATOR' ? 'SPECTATING...' :
-                    (isNoFireAction ? 'DONE' : 'FIRE LASER')))}
-            </button>
+          <div className="controls-area w-full flex justify-center z-10 gap-4">
+            {gameMode === 'SPECTATOR' && !gameState.winner ? (
+              <>
+                <button
+                  onClick={() => setIsPaused(!isPaused)}
+                  className={clsx(
+                    "px-6 py-3 rounded-full font-bold text-lg tracking-wider text-black transition-all active:scale-95 shadow-lg flex items-center gap-2",
+                    isPaused
+                      ? "bg-green-500 hover:bg-green-400 shadow-[0_0_20px_rgba(34,197,94,0.5)]"
+                      : "bg-yellow-500 hover:bg-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.5)]"
+                  )}
+                >
+                  {isPaused ? <Play size={24} /> : <Pause size={24} />}
+                  {isPaused ? "RESUME" : "PAUSE"}
+                </button>
+                <button
+                  onClick={handleQuit}
+                  className="px-6 py-3 rounded-full font-bold text-lg tracking-wider text-white bg-red-600 hover:bg-red-500 transition-all active:scale-95 shadow-lg shadow-[0_0_20px_rgba(220,38,38,0.5)] flex items-center gap-2"
+                >
+                  <LogOut size={24} />
+                  QUIT
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
+                className={clsx(
+                  "px-8 py-3 md:px-12 md:py-4 rounded-full font-bold text-lg md:text-2xl tracking-wider text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg",
+                  gameState.winner ? "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]" :
+                    isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
+                      "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
+                )}
+                disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED'))}
+              >
+                {gameState.winner ? 'SHOW RESULTS' :
+                  (gameState.isFiring ? 'FIRING...' :
+                    (isNoFireAction ? 'DONE' : 'FIRE LASER'))}
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col md:flex-row items-start gap-4 md:gap-12 w-full max-w-6xl justify-center">
@@ -648,7 +674,7 @@ function App() {
         )
       }
 
-      <MusicControls />
+      <MusicControls isGamePaused={isPaused} />
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
