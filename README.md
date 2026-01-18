@@ -2,7 +2,7 @@
 
 > A turn-based strategy game built with React, Vite, and TypeScript.
 
-**Laser Wars** is a tactical game where two players (or Player vs AI) compete to destroy the opponent's "Source" using lasers, mirrors, walls, and bombs.
+**Laser Wars** is a tactical game where two players (or Player vs AI) compete to destroy the opponent's "Source" using lasers, mirrors, walls, and bombs. Now features **Training Mode Playback** and an interactive **Music Playlist**!
 
 ## 🚀 Getting Started
 
@@ -71,6 +71,13 @@ The AI supports 3 difficulty levels (Easy, Medium, Hard) which map to search dep
 - Moving its Source.
 - Defusing Bombs.
 - **Offensive Bombing**: Identifying and destroying opponent assets.
+
+## 📚 Documentation
+
+For detailed information about the game, check out the following guides:
+
+-   **[Game Play Mechanics](docs/game-play.md)**: Detailed rules, turn structure, and tool usage.
+-   **[AI Engine Mechanics](docs/game-ai-engine.md)**: Deep dive into the Minimax algorithm, heuristics, and decision-making process.
 
 ## 🎮 Game Mechanics (Developer Notes)
 

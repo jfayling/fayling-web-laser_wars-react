@@ -39,9 +39,16 @@ When the search reaches maximum depth or a terminal state, the board is scored:
     *   **-1,000,000**: Own Source Destroyed (Loss).
 *   **Heuristic Factors** (if non-terminal):
     *   **Material**: Points for owning Mirrors and Bombs.
-    *   **Threat Avoidance**: Heavy penalty (-900) if an Enemy Bomb is adjacent to the Own Source (Critical Danger).
+    *   **Threat Avoidance**: 
+        *   Heavy penalty if an Enemy Bomb is adjacent to the Own Source.
+        *   **Laser Bomb Threat**: Critical penalty (-10,000) if the AI's own laser hits a bomb that would explode its own Source (Suicide prevention).
 
-### 2.4 Selection
+
+### 2.5 Advanced Tactics
+- **Loop Detection**: The AI tracks recent moves to detect repetitive patterns (e.g., repeatedly placing a bomb that gets defused). If a loop is detected, the AI forces a different move to break the stalemate.
+- **Panic Mode**: If the AI detects a critical threat (score < -2000) and cannot find a winning move, it overrides normal logic to force a **DEFUSE** action on the threatening bomb, ensuring self-preservation.
+
+### 2.6 Selection
 The AI selects the move that maximizes the minimum guaranteed score (Minimax). 
 - **Randomness**: If multiple moves share the exact same top score, the AI **randomly selects one**. This prevents infinite loops and repetitive behavior.
 

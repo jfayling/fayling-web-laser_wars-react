@@ -27,12 +27,13 @@ The active player selects a tool and interacts with the board.
 - **Modify Existing Board**: You generally cannot move opponents' pieces or your own old pieces, **except** with the Eraser.
 
 ### Phase 2: Action (Fire)
-Once the move is set, the player clicks **"FIRE LASER"**.
-- The Source emits a laser beam.
-- The beam travels through the grid, interacting with pieces.
+### Phase 2: Action
+Once the move is set, the player clicks the action button.
+- **Fire Laser**: For aggressive moves (Mirrors), the Source emits a laser beam that travels through the grid.
+- **Silent Action**: For non-firing moves (Walls, Bombs, Moving/Rotating Source), the turn ends immediately without firing the laser. The action button will say "DONE" instead of "FIRE LASER".
 - If no game-ending event occurs, the turn passes to the other player.
 
-> **Note**: If the **Eraser** is used on a piece from a *previous* turn, the turn ends **immediately** without firing the laser.
+> **Note**: If the **Eraser**, **Defuse**, or **Offensive Bomb** is used, the turn ends **immediately** without firing the laser.
 
 ## 4. Entities & Interactions
 
@@ -57,6 +58,7 @@ Once the move is set, the player clicks **"FIRE LASER"**.
 ### Walls
 - Blocks the laser completely.
 - Useful for defense.
+- **Placement**: Placing a wall is a "Silent Action" - it ends the turn without firing the laser.
 
 ### Bombs
 - **Defensive Usage**: Place on an empty cell.
@@ -64,6 +66,7 @@ Once the move is set, the player clicks **"FIRE LASER"**.
     - If hit by a laser, it explodes immediately.
     - The laser **stops** at the bomb (it does not pass through).
     - **Strategy**: You can intentionally shoot enemy bombs to detonate them!
+    - **Placement**: Placing a defensive bomb is a "Silent Action" - it ends the turn without firing the laser.
 - **Offensive Usage**: Click on an **Opponent's Wall or Mirror** with the Bomb tool.
     - **Effect**: Immediately destroys the target piece (sets it to Empty).
     - **Cost**: Your turn ends immediately (skips firing).
@@ -103,7 +106,7 @@ Once the move is set, the player clicks **"FIRE LASER"**.
 - **Rules**:
   - You can move back to the original square to undo the choice.
   - If you commit to a move (stay in a new position), you **cannot** perform any other action (like placing mirrors) in the same turn.
-  - You **MUST** fire the laser after moving.
+  - **Ends turn immediately (no laser fire)**.
   - Moving is a strategic way to dodge lasers or get a better firing angle.
 
 ## 5. Controls
@@ -118,5 +121,12 @@ Once the move is set, the player clicks **"FIRE LASER"**.
     - Add `?features=AUTO_START_TRAINING` to auto-enable it on load.
 - **Live Logs**: Click the **Logs** button (file icon) during gameplay to view a real-time table of moves.
 - **Export**:
-    - **Copy to Clipboard**: Copy JSON data directly from the Log Viewer.
+    - **Playback Mode**: In the logs modal, click "Playback" to replay the game session move-by-move.
+    - **View JSON**: Click "View JSON" to inspect the raw session data and copy it to the clipboard.
     - **View Logs**: After a game ends, click "VIEW LOGS" to inspect and save the match data.
+
+## 7. Audio
+- **Music**: The game features a retro-futuristic playlist.
+    - Music is shuffled on start.
+    - Toggle music on/off via the volume icon in the top right.
+- **SFX**: Sound effects for placing pieces, firing lasers, explosions, and wall hits.
