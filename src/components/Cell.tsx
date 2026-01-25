@@ -35,7 +35,7 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove, isTraini
                     {x},{y}
                 </div>
             )}
-            {cell.content === 'MIRROR_A' && (
+            {cell.content === 'MIRROR_A' && cell.owner && (
                 // / Mirror (Bottom-Left to Top-Right)
                 <div className="relative w-full h-full flex items-center justify-center">
                     {/* Main reflective surface */}
@@ -66,7 +66,7 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove, isTraini
                     </div>
                 </div>
             )}
-            {cell.content === 'MIRROR_B' && (
+            {cell.content === 'MIRROR_B' && cell.owner && (
                 // \ Mirror (Top-Left to Bottom-Right)
                 <div className="relative w-full h-full flex items-center justify-center">
                     {/* Main reflective surface */}
