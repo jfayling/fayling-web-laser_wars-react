@@ -41,6 +41,7 @@ interface MultiplayerContextType {
     clearNotification: () => void;
     signOut: () => Promise<void>;
     ensureSession: () => Promise<void>;
+    leaveMatch: () => void;
 }
 
 const MultiplayerContext = createContext<MultiplayerContextType | undefined>(undefined);
@@ -290,12 +291,21 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 }
 
                 if (newMatch.status === 'forfeited') {
-                    // Challenge was declined
-                    console.log('[MultiplayerContext] Match forfeited/declined');
-                    setActiveMatchId(null);
-                    setMatchDetails(null);
-                    setIsSearching(false);
-                    // Optional: Could set a "Declined" flag to show a toast
+                    // Only auto-clear if we were NOT in an active game (e.g. declined challenge).
+                    // If we were active, leave it so the UI can show the "Opponent Forfeit" modal.
+                    // We check if we are currently searching or if status was pending.
+                    // Since matchDetails might be stale in this closure without dependency update, 
+                    // we rely on the fact that if we are 'searching', it was pending.
+                    if (isSearching) {
+                        console.log('[MultiplayerContext] Challenge declined');
+                        setActiveMatchId(null);
+                        setMatchDetails(null);
+                        setIsSearching(false);
+                    } else {
+                        console.log('[MultiplayerContext] Match forfeited during game - waiting for UI to handle');
+                        // Ensure we update local details so UI sees the new status
+                        setMatchDetails(newMatch);
+                    }
                 }
             })
             .subscribe();
@@ -489,6 +499,11 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setIncomingChallenges(prev => prev.filter(m => m.id !== matchId));
     };
 
+    const leaveMatch = () => {
+        setActiveMatchId(null);
+        setMatchDetails(null);
+    };
+
     const signOut = async () => {
         if (user) {
             // Remove matches where user is involved
@@ -542,7 +557,8 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             notification,
             clearNotification,
             signOut,
-            ensureSession
+            ensureSession,
+            leaveMatch
         }}>
             {children}
         </MultiplayerContext.Provider>

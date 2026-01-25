@@ -30,7 +30,7 @@ function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { playPlaceSound, playRotateSound, playFireSound, playWinSound, playExplosionSound, playWallHitSound } = useSound();
   const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame } = useGameState(playExplosionSound, playWallHitSound);
-  const { activeMatchId, matchDetails, playerRole, user, opponentStatus } = useMultiplayer();
+  const { activeMatchId, matchDetails, playerRole, user, opponentStatus, leaveMatch } = useMultiplayer();
   const { aiDifficulty } = useSettings();
   const [activeAiDifficulty, setActiveAiDifficulty] = useState<import('./types').Difficulty>('Medium');
 
@@ -46,6 +46,7 @@ function App() {
   const [isPaused, setIsPaused] = useState(false);
   const [matchEndedAlert, setMatchEndedAlert] = useState<{ isOpen: boolean, message: string }>({ isOpen: false, message: '' });
   const [isConnectionGracePeriod, setIsConnectionGracePeriod] = useState(false);
+  const [isQuitModalOpen, setIsQuitModalOpen] = useState(false);
 
   useEffect(() => {
     if (gameState.winner) {
@@ -105,18 +106,41 @@ function App() {
   };
 
   const handleQuit = async () => {
+    if (gameMode === 'MULTIPLAYER') {
+      // Create a separate performQuit to call after confirmation
+      setIsQuitModalOpen(true);
+      return;
+    }
+    // For other modes, quit immediately
+    performQuit();
+  };
+
+  const performQuit = async () => {
     if (gameMode === 'MULTIPLAYER' && activeMatchId) {
-      await supabase.from('matches').update({
+      // 1. Update DB to notify opponent
+      const { error } = await supabase.from('matches').update({
         status: 'forfeited',
         winner_id: playerRole === 'BLUE' ? matchDetails?.player2_id : matchDetails?.player1_id
       }).eq('id', activeMatchId);
+
+      if (error) console.error("Error forfeiting match:", error);
+
+      // 2. Clear local multiplayer state so we don't auto-rejoin
+      leaveMatch();
     }
 
     resetGame();
     setMoveHistory([]); // Clear history
-    setGameMode(null);
+
+    if (gameMode === 'MULTIPLAYER') {
+      setGameMode('MULTIPLAYER_LOBBY');
+    } else {
+      setGameMode(null);
+    }
+
     setIsSettingsOpen(false);
     setIsLogViewerOpen(false);
+    setIsQuitModalOpen(false);
   };
 
   const generateSessionData = (): GameSession => {
@@ -294,11 +318,12 @@ function App() {
       playWinSound(); // Use a sound to notify?
     } else if (activeMatchId && matchDetails?.status === 'forfeited' && gameMode === 'MULTIPLAYER') {
       // Opponent forfeited or I quit
+      // We don't navigate away yet - we wait for the user to acknowledge the modal.
       setMatchEndedAlert({ isOpen: true, message: "Match ended: Opponent Forfeit or You Quit" });
-      setGameMode(null);
       resetGame();
+      leaveMatch(); // Clear the context state now that we've handled it
     }
-  }, [activeMatchId, matchDetails, gameMode, resetGame, playWinSound]);
+  }, [activeMatchId, matchDetails, gameMode, resetGame, playWinSound, leaveMatch]);
 
   // Subscribe to Remote Events
   useEffect(() => {
@@ -631,20 +656,32 @@ function App() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
-                className={clsx(
-                  "px-8 py-3 md:px-12 md:py-4 rounded-full font-bold text-lg md:text-2xl tracking-wider text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg",
-                  gameState.winner ? "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]" :
-                    isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
-                      "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
+              <div className="flex gap-4 w-full justify-center">
+                {gameMode === 'MULTIPLAYER' && !gameState.winner && (
+                  <button
+                    onClick={handleQuit}
+                    className="px-6 py-3 rounded-full font-bold text-lg tracking-wider text-white bg-red-600 hover:bg-red-500 transition-all active:scale-95 shadow-lg shadow-[0_0_20px_rgba(220,38,38,0.5)] flex items-center gap-2"
+                    title="Quit Match"
+                  >
+                    <LogOut size={24} />
+                    <span className="hidden md:inline">QUIT</span>
+                  </button>
                 )}
-                disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED') || (gameMode === 'MULTIPLAYER' && playerRole !== gameState.turn))}
-              >
-                {gameState.winner ? 'SHOW RESULTS' :
-                  (gameState.isFiring ? 'FIRING...' :
-                    (isNoFireAction ? 'DONE' : 'FIRE LASER'))}
-              </button>
+                <button
+                  onClick={gameState.winner ? () => setIsWinModalVisible(true) : onFireWrapper}
+                  className={clsx(
+                    "px-8 py-3 md:px-12 md:py-4 rounded-full font-bold text-lg md:text-2xl tracking-wider text-black transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg flex-grow md:flex-grow-0",
+                    gameState.winner ? "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]" :
+                      isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
+                        "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
+                  )}
+                  disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED') || (gameMode === 'MULTIPLAYER' && playerRole !== gameState.turn))}
+                >
+                  {gameState.winner ? 'SHOW RESULTS' :
+                    (gameState.isFiring ? 'FIRING...' :
+                      (isNoFireAction ? 'DONE' : 'FIRE LASER'))}
+                </button>
+              </div>
             )}
           </div>
 
@@ -819,8 +856,24 @@ function App() {
         isOpen={matchEndedAlert.isOpen}
         title="Match Ended"
         message={matchEndedAlert.message}
-        onCancel={() => setMatchEndedAlert({ ...matchEndedAlert, isOpen: false })}
+        onCancel={() => {
+          setMatchEndedAlert({ ...matchEndedAlert, isOpen: false });
+          if (gameMode === 'MULTIPLAYER') {
+            setGameMode('MULTIPLAYER_LOBBY');
+          } else {
+            setGameMode(null);
+          }
+        }}
         isAlert={true}
+      />
+      <ConfirmationModal
+        isOpen={isQuitModalOpen}
+        title="Quit Match"
+        message="Are you sure you want to quit? You will forfeit the match."
+        confirmText="Quit"
+        type="error"
+        onCancel={() => setIsQuitModalOpen(false)}
+        onConfirm={performQuit}
       />
     </div >
   );
