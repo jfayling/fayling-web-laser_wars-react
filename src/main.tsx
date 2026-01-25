@@ -4,11 +4,14 @@ import './index.css'
 import App from './App.tsx'
 
 import { SettingsProvider } from './contexts/SettingsContext'
+import { MultiplayerProvider } from './contexts/MultiplayerContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <SettingsProvider>
-      <App />
+      <MultiplayerProvider>
+        <App />
+      </MultiplayerProvider>
     </SettingsProvider>
   </StrictMode>,
 )

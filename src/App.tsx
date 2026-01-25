@@ -18,14 +18,19 @@ import { FileText, Pause, Play, LogOut } from 'lucide-react';
 import type { RecordedMove, GameSession, AIConfiguration } from './types';
 import { AI_ENGINE_VERSION } from './logic/aiLogic';
 import AI_CONFIG from './logic/aiConfig.json';
+import { MultiplayerMenu } from './components/MultiplayerMenu';
+import { ConfirmationModal } from './components/ConfirmationModal';
+import { supabase } from './lib/supabase';
+import { useMultiplayer } from './contexts/MultiplayerContext';
 
-export type GameMode = 'PVP' | 'PVE' | 'SPECTATOR' | 'PLAYBACK' | null;
+export type GameMode = 'PVP' | 'PVE' | 'SPECTATOR' | 'PLAYBACK' | 'MULTIPLAYER_LOBBY' | 'MULTIPLAYER' | null;
 
 function App() {
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { playPlaceSound, playRotateSound, playFireSound, playWinSound, playExplosionSound, playWallHitSound } = useSound();
   const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame } = useGameState(playExplosionSound, playWallHitSound);
+  const { activeMatchId, matchDetails, playerRole, user, opponentStatus } = useMultiplayer();
   const { aiDifficulty } = useSettings();
   const [activeAiDifficulty, setActiveAiDifficulty] = useState<import('./types').Difficulty>('Medium');
 
@@ -39,6 +44,8 @@ function App() {
   const [playbackSession, setPlaybackSession] = useState<GameSession | null>(null);
   const [isWinModalVisible, setIsWinModalVisible] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [matchEndedAlert, setMatchEndedAlert] = useState<{ isOpen: boolean, message: string }>({ isOpen: false, message: '' });
+  const [isConnectionGracePeriod, setIsConnectionGracePeriod] = useState(false);
 
   useEffect(() => {
     if (gameState.winner) {
@@ -97,7 +104,14 @@ function App() {
     playPlaceSound();
   };
 
-  const handleQuit = () => {
+  const handleQuit = async () => {
+    if (gameMode === 'MULTIPLAYER' && activeMatchId) {
+      await supabase.from('matches').update({
+        status: 'forfeited',
+        winner_id: playerRole === 'BLUE' ? matchDetails?.player2_id : matchDetails?.player1_id
+      }).eq('id', activeMatchId);
+    }
+
     resetGame();
     setMoveHistory([]); // Clear history
     setGameMode(null);
@@ -267,12 +281,79 @@ function App() {
   }, [gameMode, gameState.turn, gameState.winner, gameState.isFiring, gameState.grid, playPlaceSound, handleCellClick, playFireSound, fireLaser, activeAiDifficulty, isPaused]);
 
 
-  // Handle Win/Loss Sounds
+  // Multiplayer Logic
+  useEffect(() => {
+    if (activeMatchId && matchDetails?.status === 'active' && gameMode !== 'MULTIPLAYER') {
+      // Match started!
+      setGameMode('MULTIPLAYER');
+      setIsConnectionGracePeriod(true); // Allow 10 seconds for connection to stabilize
+      setTimeout(() => setIsConnectionGracePeriod(false), 10000);
+
+      resetGame();
+      setMoveHistory([]);
+      playWinSound(); // Use a sound to notify?
+    } else if (activeMatchId && matchDetails?.status === 'forfeited' && gameMode === 'MULTIPLAYER') {
+      // Opponent forfeited or I quit
+      setMatchEndedAlert({ isOpen: true, message: "Match ended: Opponent Forfeit or You Quit" });
+      setGameMode(null);
+      resetGame();
+    }
+  }, [activeMatchId, matchDetails, gameMode, resetGame, playWinSound]);
+
+  // Subscribe to Remote Events
+  useEffect(() => {
+    if (gameMode !== 'MULTIPLAYER' || !activeMatchId) return;
+
+    const channel = supabase.channel(`match_game:${activeMatchId}`);
+
+    channel
+      .on('broadcast', { event: 'click' }, ({ payload }) => {
+        const { x, y, tool, turn } = payload;
+        // Only apply if it's the OTHER player's turn (or consistent)
+        // But strict turn checking is good.
+        if (gameState.turn === turn) {
+          // It's technically "their" turn, so if gameState thinks it's theirs, apply.
+
+          // Force tool selection to match what they used (visual feedback)
+          setSelectedTool(tool);
+          handleCellClick(x, y, tool);
+
+          // Sounds
+          if (tool === 'MIRROR') playPlaceSound();
+          else playPlaceSound(); // Generalize
+        }
+      })
+      .on('broadcast', { event: 'fire' }, ({ payload }) => {
+        const { skipSimulation } = payload;
+        playFireSound();
+        fireLaser(skipSimulation);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [gameMode, activeMatchId, gameState.turn, handleCellClick, fireLaser, playPlaceSound, playFireSound, setSelectedTool]);
+
+
+  // Handle Win/Loss Sounds and DB Update
   useEffect(() => {
     if (gameState.winner) {
       playWinSound();
+
+      // Update Match Status in DB if I am the winner (to avoid double write)
+      // Or just both write, it's idempotent.
+      // Better: The winner writes.
+      if (gameMode === 'MULTIPLAYER' && activeMatchId && playerRole === gameState.winner) {
+        supabase.from('matches').update({
+          status: 'finished',
+          winner_id: user?.id,
+          // metadata: { reason: gameState.winReason } // Optional
+        }).eq('id', activeMatchId).then();
+      }
     }
-  }, [gameState.winner, playWinSound]);
+  }, [gameState.winner, playWinSound, gameMode, activeMatchId, playerRole, user]);
+
 
   const onCellClickWrapper = (x: number, y: number) => {
     if (gameState.winner || gameState.isFiring) return;
@@ -280,22 +361,41 @@ function App() {
     // Prevent clicking during AI turn in PvE or Spectator
     if ((gameMode === 'PVE' && gameState.turn === 'RED') || gameMode === 'SPECTATOR') return;
 
+    // Multiplayer Restriction: Can only click if it is MY turn
+    if (gameMode === 'MULTIPLAYER') {
+      if (playerRole !== gameState.turn) return; // Block input
+    }
+
+    // ... [Original Logic continues]
+
     const cell = gameState.grid[y][x];
     const canInteract = cell.content === 'EMPTY' || cell.owner === gameState.turn;
 
     if (canInteract) {
+      // ... [Sound logic - mostly redundant with what I added in listener but okay]
       if (selectedTool === 'MIRROR') {
         if (cell.content === 'EMPTY') playPlaceSound();
         else if (cell.content.startsWith('MIRROR')) playRotateSound();
       } else if (selectedTool === 'ERASER') {
-        if (cell.owner === gameState.turn) playPlaceSound(); // Reuse place sound for now, maybe need delete sound?
+        if (cell.owner === gameState.turn) playPlaceSound();
       } else {
         if (cell.content === 'EMPTY') playPlaceSound();
       }
     }
 
-    // Check if this is a terminal action that will end the turn immediately
+    // Broadcast Click (BEFORE local handleCellClick?) OR AFTER?
+    // Doesn't matter much for optimistic UI.
+    if (gameMode === 'MULTIPLAYER' && activeMatchId && playerRole === gameState.turn) {
+      supabase.channel(`match_game:${activeMatchId}`).send({
+        type: 'broadcast',
+        event: 'click',
+        payload: { x, y, tool: selectedTool, turn: gameState.turn }
+      });
+    }
+
+    // Check if this is a terminal action [Refactoring needed to keep logic flow]
     let isTerminalAction = false;
+    // ... [Re-pasting original logic]
     if (selectedTool === 'DEFUSE') {
       const opponent = gameState.turn === 'BLUE' ? 'RED' : 'BLUE';
       if (cell.content === 'BOMB' && cell.owner === opponent) {
@@ -310,6 +410,8 @@ function App() {
     }
 
     handleCellClick(x, y);
+
+    // ... [Record history]
 
     // Record terminal actions immediately
     if (isTerminalAction && gameState.turn === 'BLUE') {
@@ -370,6 +472,15 @@ function App() {
     setMoveHistory(prev => [...prev, rec]);
 
     if (!skipSimulation) playFireSound();
+
+    if (gameMode === 'MULTIPLAYER' && activeMatchId && playerRole === gameState.turn) {
+      supabase.channel(`match_game:${activeMatchId}`).send({
+        type: 'broadcast',
+        event: 'fire',
+        payload: { skipSimulation }
+      });
+    }
+
     fireLaser(skipSimulation);
   };
 
@@ -389,6 +500,10 @@ function App() {
 
   if (gameMode === 'PLAYBACK') {
     return <PlaybackScreen onExit={() => { setGameMode(null); setPlaybackSession(null); }} initialSession={playbackSession || undefined} />;
+  }
+
+  if (gameMode === 'MULTIPLAYER_LOBBY') {
+    return <MultiplayerMenu onBack={() => setGameMode(null)} />;
   }
 
   /* New handler for tool selection */
@@ -478,7 +593,7 @@ function App() {
         </h1>
         <p className="text-gray-400">Turn-based strategy. Defend your source. Destroy the enemy.</p>
         <div className="mt-2 text-sm text-gray-500 font-bold uppercase tracking-widest border border-gray-800 inline-block px-3 py-1 rounded-full">
-          Mode: {gameMode === 'PVP' ? 'Versus Player' : (gameMode === 'SPECTATOR' ? 'Spectator Mode' : 'Versus Computer')}
+          Mode: {gameMode === 'PVP' ? 'Versus Player' : (gameMode === 'SPECTATOR' ? 'Spectator Mode' : (gameMode === 'MULTIPLAYER' ? 'Online Match' : 'Versus Computer'))}
         </div>
       </header>
 
@@ -524,7 +639,7 @@ function App() {
                     isNoFireAction ? "bg-gradient-to-r from-green-500 to-green-600 shadow-[0_0_20px_rgba(34,197,94,0.5)] hover:bg-green-400 hover:shadow-[0_0_30px_rgba(34,197,94,0.8)]" :
                       "bg-gradient-to-r from-yellow-500 to-orange-600 shadow-[0_0_20px_rgba(234,179,8,0.5)] hover:scale-105 hover:shadow-[0_0_30px_rgba(234,179,8,0.8)]"
                 )}
-                disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED'))}
+                disabled={!gameState.winner && (gameState.isFiring || (gameMode === 'PVE' && gameState.turn === 'RED') || (gameMode === 'MULTIPLAYER' && playerRole !== gameState.turn))}
               >
                 {gameState.winner ? 'SHOW RESULTS' :
                   (gameState.isFiring ? 'FIRING...' :
@@ -547,7 +662,8 @@ function App() {
             )}>
               <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'BLUE' ? 'bg-blue-900/30 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
                 <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-blue-400">
-                  {gameMode === 'SPECTATOR' ? 'Computer (Blue)' : 'Player 1 (Blue)'}
+                  {gameMode === 'MULTIPLAYER' ? (matchDetails?.player1?.nickname || 'Player 1') :
+                    (gameMode === 'SPECTATOR' ? 'Computer (Blue)' : 'Player 1 (Blue)')}
                 </h2>
                 {gameMode === 'SPECTATOR' && (
                   <div className="text-[10px] md:text-xs text-blue-400/80 uppercase font-bold tracking-wider md:mb-2 bg-blue-900/20 px-2 py-1 rounded inline-block ml-2 md:ml-0">
@@ -558,7 +674,7 @@ function App() {
                   {gameState.turn === 'BLUE' ? (gameMode === 'SPECTATOR' ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
                 </div>
               </div>
-              {gameState.turn === 'BLUE' && gameMode !== 'SPECTATOR' && (
+              {gameState.turn === 'BLUE' && gameMode !== 'SPECTATOR' && (gameMode !== 'MULTIPLAYER' || playerRole === 'BLUE') && (
                 <Toolbar
                   selectedTool={selectedTool}
                   onSelectTool={handleToolSelect}
@@ -587,7 +703,8 @@ function App() {
             )}>
               <div className={`p-3 md:p-6 rounded-xl border transition-colors duration-300 flex flex-row md:flex-col items-center justify-between md:justify-center ${gameState.turn === 'RED' ? 'bg-red-900/30 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : 'bg-gray-900 border-gray-800'}`}>
                 <h2 className="text-sm md:text-xl font-semibold md:mb-4 text-red-500">
-                  {gameMode === 'PVE' || gameMode === 'SPECTATOR' ? `Computer (Red)` : 'Player 2 (Red)'}
+                  {gameMode === 'MULTIPLAYER' ? (matchDetails?.player2?.nickname || 'Player 2') :
+                    (gameMode === 'PVE' || gameMode === 'SPECTATOR' ? `Computer (Red)` : 'Player 2 (Red)')}
                 </h2>
                 {(gameMode === 'PVE' || gameMode === 'SPECTATOR') && (
                   <div className="text-[10px] md:text-xs text-red-400/80 uppercase font-bold tracking-wider md:mb-2 bg-red-900/20 px-2 py-1 rounded inline-block ml-2 md:ml-0">
@@ -598,7 +715,7 @@ function App() {
                   {gameState.turn === 'RED' ? ((gameMode === 'PVE' || gameMode === 'SPECTATOR') ? 'THINKING...' : 'PLANNING...') : 'WAITING'}
                 </div>
               </div>
-              {gameState.turn === 'RED' && gameMode === 'PVP' && (
+              {gameState.turn === 'RED' && (gameMode === 'PVP' || (gameMode === 'MULTIPLAYER' && playerRole === 'RED')) && (
                 <Toolbar
                   selectedTool={selectedTool}
                   onSelectTool={handleToolSelect}
@@ -660,6 +777,27 @@ function App() {
         )
       }
 
+
+
+      {/* Opponent Disconnected Overlay */}
+      {
+        gameMode === 'MULTIPLAYER' && user && matchDetails?.status === 'active' &&
+        opponentStatus === 'disconnected' && !isConnectionGracePeriod && !gameState.winner && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
+            <div className="bg-gray-900 border border-red-500 text-white p-6 rounded-xl shadow-2xl animate-pulse pointer-events-auto flex flex-col items-center">
+              <h3 className="text-2xl font-bold text-red-500 mb-2">OPPONENT DISCONNECTED</h3>
+              <p className="mb-4 text-gray-300">Waiting for opponent to reconnect...</p>
+              <button
+                onClick={handleQuit}
+                className="px-6 py-2 bg-red-600 hover:bg-red-500 rounded-lg font-bold"
+              >
+                Quit Match
+              </button>
+            </div>
+          </div>
+        )
+      }
+
       <MusicControls isGamePaused={isPaused} />
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -676,6 +814,13 @@ function App() {
         sessionData={generateSessionData()}
         onExport={downloadTrainingData}
         onPlayback={handlePlayback}
+      />
+      <ConfirmationModal
+        isOpen={matchEndedAlert.isOpen}
+        title="Match Ended"
+        message={matchEndedAlert.message}
+        onCancel={() => setMatchEndedAlert({ ...matchEndedAlert, isOpen: false })}
+        isAlert={true}
       />
     </div >
   );

@@ -3,7 +3,7 @@ import { Users, Monitor, Zap, HelpCircle, Play } from 'lucide-react';
 import { HowToPlayModal } from './HowToPlayModal';
 
 interface StartScreenProps {
-    onSelectMode: (mode: 'PVP' | 'PVE' | 'SPECTATOR' | 'PLAYBACK', difficulty?: import('../types').Difficulty) => void;
+    onSelectMode: (mode: 'PVP' | 'PVE' | 'SPECTATOR' | 'PLAYBACK' | 'MULTIPLAYER_LOBBY', difficulty?: import('../types').Difficulty) => void;
     defaultDifficulty: import('../types').Difficulty;
 }
 
@@ -93,6 +93,17 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onSelectMode, defaultD
                             </div>
                         </button>
                     )}
+                </div>
+
+                <div className="mt-6">
+                    <button
+                        onClick={() => onSelectMode('MULTIPLAYER_LOBBY')}
+                        className="px-8 py-3 bg-blue-600/20 border border-blue-500/50 hover:bg-blue-600/40 text-blue-300 hover:text-white rounded-xl font-bold transition-all flex items-center gap-3 group"
+                    >
+                        <Users size={24} className="group-hover:scale-110 transition-transform" />
+                        PLAY ONLINE
+                        <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full ml-2">BETA</span>
+                    </button>
                 </div>
             </div>
 
