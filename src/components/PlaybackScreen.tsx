@@ -181,7 +181,6 @@ export const PlaybackScreen: React.FC<PlaybackScreenProps> = ({ onExit, initialS
                             <Board
                                 gameState={playbackState.gameState}
                                 onCellClick={() => { }} // Read-only in playback mode
-                                isTrainingMode={true}
                             />
                         </div>
 

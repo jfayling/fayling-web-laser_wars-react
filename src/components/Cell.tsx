@@ -7,12 +7,12 @@ interface CellProps {
     cell: CellType;
     isValidMove?: boolean;
     onClick: () => void;
-    isTrainingMode?: boolean;
+
     x?: number;
     y?: number;
 }
 
-export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove, isTrainingMode, x, y }) => {
+export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove, x, y }) => {
     const isRed = cell.owner === 'RED';
     const isBlue = cell.owner === 'BLUE';
 
@@ -29,8 +29,8 @@ export const Cell: React.FC<CellProps> = ({ cell, onClick, isValidMove, isTraini
                 }
             )}
         >
-            {/* Grid coordinates in training mode */}
-            {isTrainingMode && x !== undefined && y !== undefined && (
+            {/* Grid coordinates - always shown now */}
+            {x !== undefined && y !== undefined && (
                 <div className="absolute top-0.5 left-0.5 text-[8px] font-mono text-gray-500 leading-none pointer-events-none z-10">
                     {x},{y}
                 </div>

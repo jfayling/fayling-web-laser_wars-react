@@ -185,27 +185,37 @@ export const useGameState = (
                     const isTargetValid = prev.validMoves?.some(m => m.x === x && m.y === y);
 
                     if (prev.moveStartPos.x === x && prev.moveStartPos.y === y) {
-                        return {
-                            ...prev,
-                            validMoves: undefined,
-                            moveStartPos: null
-                        };
+                        if (!prev.activeCell) {
+                            return {
+                                ...prev,
+                                validMoves: undefined,
+                                moveStartPos: null
+                            };
+                        }
                     }
 
                     if (isTargetValid) {
-                        const sourceCell = newGrid[prev.moveStartPos.y][prev.moveStartPos.x];
+                        const fromX = prev.activeCell ? prev.activeCell.x : prev.moveStartPos.x;
+                        const fromY = prev.activeCell ? prev.activeCell.y : prev.moveStartPos.y;
+
+                        const sourceCell = newGrid[fromY][fromX];
                         const targetCell = newGrid[y][x];
 
                         targetCell.content = sourceCell.content;
                         targetCell.owner = sourceCell.owner;
-                        targetCell.orientation = sourceCell.orientation; // Preserve orientation
+                        targetCell.orientation = sourceCell.orientation;
 
                         sourceCell.content = 'EMPTY';
                         sourceCell.owner = null;
-                        sourceCell.orientation = undefined; // Clear orientation from original cell
+                        sourceCell.orientation = undefined;
 
-                        newActiveCell = { x, y };
-                        newValidMoves = [prev.moveStartPos];
+                        if (x === prev.moveStartPos.x && y === prev.moveStartPos.y) {
+                            newActiveCell = null;
+                            newValidMoves = calculateValidMoves(newGrid, x, y);
+                        } else {
+                            newActiveCell = { x, y };
+                            newValidMoves = [prev.moveStartPos];
+                        }
 
                         return {
                             ...prev,

@@ -459,8 +459,8 @@ function App() {
     // If rotation is active (source rotation), it's a no-fire action
     if (gameState.originalOrientation) return true;
 
-    // If a move has been performed (moveStartPos is set), it's a no-fire action
-    if (gameState.moveStartPos) return true;
+    // If a move has been performed (moveStartPos is set), it's a no-fire action ONLY if we have an active destination
+    if (gameState.moveStartPos && gameState.activeCell) return true;
 
     // If active cell exists
     if (gameState.activeCell) {
@@ -730,7 +730,7 @@ function App() {
             </div>
 
             <div className="order-1 md:order-2">
-              <Board gameState={gameState} onCellClick={onCellClickWrapper} isTrainingMode={isTrainingMode} />
+              <Board gameState={gameState} onCellClick={onCellClickWrapper} />
             </div>
 
             {/* Player 2 (Red) */}
