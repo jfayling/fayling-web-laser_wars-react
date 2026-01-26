@@ -26,7 +26,6 @@ The active player selects a tool and interacts with the board.
 - **Edit Active Move**: The piece placed *this turn* is "active". You can click it again to rotate (for Mirrors) or remove it (effectively undoing the move).
 - **Modify Existing Board**: You generally cannot move opponents' pieces or your own old pieces, **except** with the Eraser.
 
-### Phase 2: Action (Fire)
 ### Phase 2: Action
 Once the move is set, the player clicks the action button.
 - **Fire Laser**: For aggressive moves (Mirrors), the Source emits a laser beam that travels through the grid.
@@ -88,7 +87,6 @@ Once the move is set, the player clicks the action button.
 - **Availability**: Enabled only if the opponent has at least one bomb on the board.
 - **Effect**:
   - Removes the target bomb.
-  - Removes the target bomb.
   - Ends the turn immediately (skips firing).
 
 ### Rotate Action
@@ -130,3 +128,17 @@ Once the move is set, the player clicks the action button.
     - Music is shuffled on start.
     - Toggle music on/off via the volume icon in the top right.
 - **SFX**: Sound effects for placing pieces, firing lasers, explosions, and wall hits.
+
+## 8. Online Multiplayer
+**Multiplayer Mode** allows you to play against other humans online.
+
+- **Lobby**:
+    - Enter a nickname to join the lobby.
+    - See other players currently in the lobby.
+- **Finding a Match**:
+    - **Quick Match**: Automatically paired with an available player or a pending game.
+    - **Challenge**: Click the "Challenge" button next to a player's name in the lobby to send a direct invite.
+- **Gameplay**:
+    - Turns are synchronized in real-time.
+    - Opponent moves are shown instantly.
+    - Disconnects or forfeits are handled automatically.

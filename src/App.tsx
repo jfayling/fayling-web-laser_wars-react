@@ -793,12 +793,36 @@ function App() {
                 >
                   VIEW BOARD
                 </button>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-                >
-                  PLAY AGAIN
-                </button>
+
+                {gameMode === 'MULTIPLAYER' ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        leaveMatch();
+                        setGameMode(null);
+                      }}
+                      className="px-8 py-4 bg-red-600 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+                    >
+                      QUIT TO MENU
+                    </button>
+                    <button
+                      onClick={() => {
+                        leaveMatch();
+                        setGameMode('MULTIPLAYER_LOBBY');
+                      }}
+                      className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+                    >
+                      PLAY AGAIN (LOBBY)
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.4)]"
+                  >
+                    PLAY AGAIN
+                  </button>
+                )}
                 {isTrainingMode && moveHistory.length > 0 && (
                   <button
                     onClick={() => setIsLogViewerOpen(true)}

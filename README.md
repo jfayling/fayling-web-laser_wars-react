@@ -2,7 +2,7 @@
 
 > A turn-based strategy game built with React, Vite, and TypeScript.
 
-**Laser Wars** is a tactical game where two players (or Player vs AI) compete to destroy the opponent's "Source" using lasers, mirrors, walls, and bombs. Now features **Training Mode Playback** and an interactive **Music Playlist**!
+**Laser Wars** is a tactical game where two players (or Player vs AI) compete to destroy the opponent's "Source" using lasers, mirrors, walls, and bombs. Now features **Online Multiplayer**, **Training Mode Playback**, and an interactive **Music Playlist**!
 
 ## 🚀 Getting Started
 
@@ -37,7 +37,7 @@ Access the game at `http://localhost:5173`.
 
 ## 🏗️ Project Architecture
 
-The codebase is organized to separate UI, State, and Game Logic.
+The codebase is organized to separate UI, State, Game Logic, and Networking.
 
 ### Directory Structure
 ```
@@ -58,13 +58,22 @@ The central nervous system of the game. It manages:
 - **Tool Handling**: Validates and applies moves (Place Mirror, Rotate, Fire, etc.).
 - **Events**: Handles sound effects and win/loss conditions.
 
-#### 2. Game Logic (`src/logic/`)
+#### 2. Online Multiplayer (`src/contexts/MultiplayerContext.tsx`)
+Managed via **Supabase Realtime**. Features include:
+-   **Lobby System**: View online players and status.
+-   **Direct Challenges**: Challenge specific players from the lobby.
+-   **Quick Match**: Auto-matching with available players.
+-   **Presence**: Real-time status updates (Online, In-Lobby, In-Game).
+
+#### 3. Game Logic (`src/logic/`)
 Core mechanics are isolated as pure functions for testability:
 - **`laserLogic.ts`**: Calculates the precise path of the laser, including reflections and collisions. It returns the path array and hit result.
 - **`aiLogic.ts`**: The AI engine. Uses an **Alpha-Beta Minimax** algorithm to calculate the best move. It simulates future turns, evaluating score based on material and threats (e.g., Offensive Bombing opportunities).
 - **`aiConfig.json`**: Configurable weights and search depths for the AI.
 
-#### 3. AI Engine
+- **`aiConfig.json`**: Configurable weights and search depths for the AI.
+
+#### 4. AI Engine
 The AI supports 3 difficulty levels (Easy, Medium, Hard) which map to search depths. It is capable of:
 - Placing Mirrors/Walls/Bombs.
 - Rotating its Source.

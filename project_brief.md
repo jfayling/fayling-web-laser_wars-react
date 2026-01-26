@@ -8,6 +8,7 @@
 
 ## 2. Tech Stack
 * **Framework:** React (Vite)
+* **Backend:** Supabase (Auth & Realtime)
 * **Language:** TypeScript
 * **Styling:** Tailwind CSS (Crucial for grid layouts and neon effects)
 * **Icons:** Lucide-React (For UI controls)
@@ -91,3 +92,13 @@ interface GameState {
 2.  Use the coordinate array to draw an SVG `<polyline>`.
 3.  Add CSS drop-shadow/filter for the "Neon Glow" effect.
 4.  Animate the `stroke-dashoffset` to make the laser look like it's "shooting".
+
+### Phase 5: Online Multiplayer (Supabase)
+1.  **Authentication**: Anonymous login + Nickname system using Supabase Auth.
+2.  **Lobby**: Realtime presence to see online players.
+3.  **Matchmaking**:
+    -   **Quick Match**: Join 'pending' matches automatically.
+    -   **Direct Challenge**: Send/Receive invites via Realtime channels.
+4.  **Game Sync**:
+    -   Sync turns and board state via `matches` table subscription.
+    -   Handle disconnects and forfeits.
