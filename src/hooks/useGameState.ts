@@ -580,12 +580,21 @@ export const useGameState = (
         setSelectedTool('MIRROR');
     }, []);
 
+    const setWinner = useCallback((winner: Player | null, winReason?: import('../types').WinReason | null) => {
+        setGameState(prev => ({
+            ...prev,
+            winner,
+            winReason: winReason ?? prev.winReason
+        }));
+    }, []);
+
     return {
         gameState,
         handleCellClick,
         fireLaser,
         selectedTool,
         setSelectedTool,
-        resetGame
+        resetGame,
+        setWinner
     };
 };

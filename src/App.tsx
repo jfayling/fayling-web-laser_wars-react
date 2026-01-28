@@ -29,7 +29,7 @@ function App() {
   const [gameMode, setGameMode] = useState<GameMode>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { playPlaceSound, playRotateSound, playFireSound, playWinSound, playExplosionSound, playWallHitSound } = useSound();
-  const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame } = useGameState(playExplosionSound, playWallHitSound);
+  const { gameState, handleCellClick, fireLaser, selectedTool, setSelectedTool, resetGame, setWinner } = useGameState(playExplosionSound, playWallHitSound);
   const { activeMatchId, matchDetails, playerRole, user, opponentStatus, leaveMatch } = useMultiplayer();
   const { aiDifficulty } = useSettings();
   const [activeAiDifficulty, setActiveAiDifficulty] = useState<import('./types').Difficulty>('Medium');
@@ -322,8 +322,12 @@ function App() {
       setMatchEndedAlert({ isOpen: true, message: "Match ended: Opponent Forfeit or You Quit" });
       resetGame();
       leaveMatch(); // Clear the context state now that we've handled it
+    } else if (activeMatchId && matchDetails?.status === 'finished' && gameMode === 'MULTIPLAYER' && matchDetails.winner_id && !gameState.winner) {
+      // Match finished - sync winner from database
+      const winnerRole = matchDetails.winner_id === matchDetails.player1_id ? 'BLUE' : 'RED';
+      setWinner(winnerRole);
     }
-  }, [activeMatchId, matchDetails, gameMode, resetGame, playWinSound, leaveMatch]);
+  }, [activeMatchId, matchDetails, gameMode, resetGame, playWinSound, leaveMatch, gameState.winner, setWinner]);
 
   // Subscribe to Remote Events
   useEffect(() => {
@@ -353,12 +357,19 @@ function App() {
         playFireSound();
         fireLaser(skipSimulation);
       })
+      .on('broadcast', { event: 'winner' }, ({ payload }) => {
+        const { winner, winReason } = payload;
+        // Sync winner from opponent
+        if (winner && !gameState.winner) {
+          setWinner(winner, winReason);
+        }
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameMode, activeMatchId, gameState.turn, handleCellClick, fireLaser, playPlaceSound, playFireSound, setSelectedTool]);
+  }, [gameMode, activeMatchId, gameState.turn, handleCellClick, fireLaser, playPlaceSound, playFireSound, setSelectedTool, setWinner, gameState.winner]);
 
 
   // Handle Win/Loss Sounds and DB Update
@@ -375,9 +386,16 @@ function App() {
           winner_id: user?.id,
           // metadata: { reason: gameState.winReason } // Optional
         }).eq('id', activeMatchId).then();
+
+        // Broadcast winner event to opponent
+        supabase.channel(`match_game:${activeMatchId}`).send({
+          type: 'broadcast',
+          event: 'winner',
+          payload: { winner: gameState.winner, winReason: gameState.winReason }
+        });
       }
     }
-  }, [gameState.winner, playWinSound, gameMode, activeMatchId, playerRole, user]);
+  }, [gameState.winner, playWinSound, gameMode, activeMatchId, playerRole, user, gameState.winReason]);
 
 
   const onCellClickWrapper = (x: number, y: number) => {

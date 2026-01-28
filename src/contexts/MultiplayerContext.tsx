@@ -14,6 +14,7 @@ export interface Match {
     player2_id: string | null;
     status: 'pending' | 'active' | 'finished' | 'forfeited';
     current_turn: string;
+    winner_id?: string | null;
     player1?: { nickname: string };
     player2?: { nickname: string };
     created_at: string;
