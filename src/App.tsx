@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { Board } from './components/Board';
 import { StartScreen } from './components/StartScreen';
@@ -47,6 +47,12 @@ function App() {
   const [matchEndedAlert, setMatchEndedAlert] = useState<{ isOpen: boolean, message: string }>({ isOpen: false, message: '' });
   const [isConnectionGracePeriod, setIsConnectionGracePeriod] = useState(false);
   const [isQuitModalOpen, setIsQuitModalOpen] = useState(false);
+
+  // Refs for broadcast handlers to read current turn/winner without re-subscribing on every change
+  const gameStateTurnRef = useRef(gameState.turn);
+  const gameStateWinnerRef = useRef(gameState.winner);
+  gameStateTurnRef.current = gameState.turn;
+  gameStateWinnerRef.current = gameState.winner;
 
   useEffect(() => {
     if (gameState.winner) {
@@ -329,7 +335,7 @@ function App() {
     }
   }, [activeMatchId, matchDetails, gameMode, resetGame, playWinSound, leaveMatch, gameState.winner, setWinner]);
 
-  // Subscribe to Remote Events
+  // Subscribe to Remote Events (stable subscription: do NOT depend on gameState.turn/winner so we don't miss broadcasts)
   useEffect(() => {
     if (gameMode !== 'MULTIPLAYER' || !activeMatchId) return;
 
@@ -338,18 +344,12 @@ function App() {
     channel
       .on('broadcast', { event: 'click' }, ({ payload }) => {
         const { x, y, tool, turn } = payload;
-        // Only apply if it's the OTHER player's turn (or consistent)
-        // But strict turn checking is good.
-        if (gameState.turn === turn) {
-          // It's technically "their" turn, so if gameState thinks it's theirs, apply.
-
-          // Force tool selection to match what they used (visual feedback)
+        // Use ref so we always have current turn; avoid re-subscribing on turn change (which would drop in-flight clicks)
+        if (gameStateTurnRef.current === turn) {
           setSelectedTool(tool);
           handleCellClick(x, y, tool);
-
-          // Sounds
           if (tool === 'MIRROR') playPlaceSound();
-          else playPlaceSound(); // Generalize
+          else playPlaceSound();
         }
       })
       .on('broadcast', { event: 'fire' }, ({ payload }) => {
@@ -359,8 +359,7 @@ function App() {
       })
       .on('broadcast', { event: 'winner' }, ({ payload }) => {
         const { winner, winReason } = payload;
-        // Sync winner from opponent
-        if (winner && !gameState.winner) {
+        if (winner && !gameStateWinnerRef.current) {
           setWinner(winner, winReason);
         }
       })
@@ -369,7 +368,7 @@ function App() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameMode, activeMatchId, gameState.turn, handleCellClick, fireLaser, playPlaceSound, playFireSound, setSelectedTool, setWinner, gameState.winner]);
+  }, [gameMode, activeMatchId, handleCellClick, fireLaser, playPlaceSound, playFireSound, setSelectedTool, setWinner]);
 
 
   // Handle Win/Loss Sounds and DB Update
