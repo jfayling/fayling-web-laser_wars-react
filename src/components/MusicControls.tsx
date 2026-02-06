@@ -4,14 +4,16 @@ import { useSettings } from '../contexts/SettingsContext';
 
 interface MusicControlsProps {
     isGamePaused?: boolean;
+    /** When false, audio is loaded but not played (e.g. start screen / lobby). Enables preloading so music starts instantly when entering a game. */
+    isInGame?: boolean;
 }
 
-export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = false }) => {
+export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = false, isInGame = true }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const { musicVolume, musicEnabled } = useSettings();
 
-    // Playlist State
+    // Playlist State - initialize with shuffle so audio can start on first mount (no extra render delay)
     const SONGS = [
         'music/laserwars_1.mp3',
         'music/laserwars_2.mp3',
@@ -19,14 +21,8 @@ export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = fal
         'music/laserwars_4.mp3'
     ];
 
-    const [playlist, setPlaylist] = useState<string[]>([]);
+    const [playlist] = useState<string[]>(() => [...SONGS].sort(() => Math.random() - 0.5));
     const [currentSongIndex, setCurrentSongIndex] = useState(0);
-
-    // Initial Shuffle
-    useEffect(() => {
-        const shuffled = [...SONGS].sort(() => Math.random() - 0.5);
-        setPlaylist(shuffled);
-    }, []);
 
     // Initialize Audio and Handle Song Changes
     useEffect(() => {
@@ -34,18 +30,14 @@ export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = fal
 
         const songUrl = `${import.meta.env.BASE_URL}${playlist[currentSongIndex]}`;
 
-        // Keep track if we should play immediately
-        // Play only if music enabled AND game is NOT paused
-        const shouldPlay = musicEnabled && !isGamePaused;
+        const shouldPlay = musicEnabled && !isGamePaused && isInGame;
 
         const audio = new Audio(songUrl);
         audioRef.current = audio;
 
-        // Configure Audio
         audio.volume = musicVolume;
-        audio.loop = false; // We handle looping manually via playlist
+        audio.loop = false;
 
-        // Play Next Song when current one ends
         const handleEnded = () => {
             setCurrentSongIndex(prev => (prev + 1) % playlist.length);
         };
@@ -57,8 +49,10 @@ export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = fal
         audio.addEventListener('play', handlePlay);
         audio.addEventListener('pause', handlePause);
 
-        // Attempt to play if enabled
-        if (shouldPlay) {
+        // Start loading immediately; play as soon as enough is buffered to avoid delay
+        const startWhenReady = () => {
+            if (!shouldPlay) return;
+            audio.removeEventListener('canplaythrough', startWhenReady);
             const playPromise = audio.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
@@ -66,32 +60,36 @@ export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = fal
                     setIsPlaying(false);
                 });
             }
+        };
+
+        if (shouldPlay) {
+            if (audio.readyState >= 3) {
+                // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA - can play immediately
+                audio.play().catch(error => {
+                    console.log("Auto-play prevented by browser:", error);
+                    setIsPlaying(false);
+                });
+            } else {
+                audio.addEventListener('canplaythrough', startWhenReady, { once: true });
+            }
         }
+        audio.load();
 
         return () => {
             audio.removeEventListener('ended', handleEnded);
             audio.removeEventListener('play', handlePlay);
             audio.removeEventListener('pause', handlePause);
+            audio.removeEventListener('canplaythrough', startWhenReady);
             audio.pause();
             audioRef.current = null;
         };
-        // Resetting audio on song change or playlist init.
-        // We include musicEnabled in deps? 
-        // If we include musicEnabled, it RE-CREATES audio on toggle. 
-        // We WANT to avoid that if possible, but for playlist logic (new song) we need to recreate.
-        // If we want to Toggle Pause/Play without recreating, we need a separate effect.
-        // So REMOVE musicEnabled from here, and ONLY use it for initial check?
-        // But if I put `musicEnabled` in the condition `if (shouldPlay)` but NOT in deps, eslint warns.
-        // And if I don't put it in deps, it won't react to toggle.
-        // So I need a separate effect for Toggle.
-
     }, [playlist, currentSongIndex]);
 
-    // Handle Enable/Disable and Game Pause without recreating audio
+    // Handle Enable/Disable, Game Pause, and isInGame without recreating audio
     useEffect(() => {
         if (!audioRef.current) return;
 
-        if (musicEnabled && !isGamePaused) {
+        if (musicEnabled && !isGamePaused && isInGame) {
             const playPromise = audioRef.current.play();
             if (playPromise !== undefined) {
                 playPromise.catch(error => {
@@ -101,7 +99,7 @@ export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = fal
         } else {
             audioRef.current.pause();
         }
-    }, [musicEnabled, isGamePaused]);
+    }, [musicEnabled, isGamePaused, isInGame]);
 
 
     // Handle Volume changes dynamically
@@ -121,6 +119,9 @@ export const MusicControls: React.FC<MusicControlsProps> = ({ isGamePaused = fal
             audioRef.current.play().catch(console.error);
         }
     };
+
+    // Only show the button when in a game (music is preloaded on start/lobby but not shown)
+    if (!isInGame) return null;
 
     return (
         <button

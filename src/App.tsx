@@ -526,27 +526,7 @@ function App() {
     fireLaser(skipSimulation);
   };
 
-  if (!gameMode) {
-    return (
-      <StartScreen
-        onSelectMode={(mode, difficulty) => {
-          setGameMode(mode);
-          if ((mode === 'PVE' || mode === 'SPECTATOR') && difficulty) {
-            setActiveAiDifficulty(difficulty);
-          }
-        }}
-        defaultDifficulty={aiDifficulty}
-      />
-    );
-  }
-
-  if (gameMode === 'PLAYBACK') {
-    return <PlaybackScreen onExit={() => { setGameMode(null); setPlaybackSession(null); }} initialSession={playbackSession || undefined} />;
-  }
-
-  if (gameMode === 'MULTIPLAYER_LOBBY') {
-    return <MultiplayerMenu onBack={() => setGameMode(null)} />;
-  }
+  const isInGame = gameMode === 'PVP' || gameMode === 'PVE' || gameMode === 'SPECTATOR' || gameMode === 'MULTIPLAYER';
 
   /* New handler for tool selection */
   const handleToolSelect = (tool: import('./types').ToolType) => {
@@ -609,6 +589,25 @@ function App() {
   }
 
   return (
+    <>
+      {!gameMode && (
+        <StartScreen
+          onSelectMode={(mode, difficulty) => {
+            setGameMode(mode);
+            if ((mode === 'PVE' || mode === 'SPECTATOR') && difficulty) {
+              setActiveAiDifficulty(difficulty);
+            }
+          }}
+          defaultDifficulty={aiDifficulty}
+        />
+      )}
+      {gameMode === 'PLAYBACK' && (
+        <PlaybackScreen onExit={() => { setGameMode(null); setPlaybackSession(null); }} initialSession={playbackSession || undefined} />
+      )}
+      {gameMode === 'MULTIPLAYER_LOBBY' && (
+        <MultiplayerMenu onBack={() => setGameMode(null)} />
+      )}
+      {isInGame && (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-start pt-4 md:pt-8 p-4">
       <button
         onClick={() => setIsSettingsOpen(true)}
@@ -876,7 +875,6 @@ function App() {
         )
       }
 
-      <MusicControls isGamePaused={isPaused} />
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -916,7 +914,10 @@ function App() {
         onCancel={() => setIsQuitModalOpen(false)}
         onConfirm={performQuit}
       />
-    </div >
+    </div>
+      )}
+      <MusicControls isGamePaused={gameMode === 'SPECTATOR' ? isPaused : false} isInGame={isInGame} />
+    </>
   );
 }
 
