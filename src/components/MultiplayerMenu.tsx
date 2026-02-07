@@ -39,10 +39,13 @@ export const MultiplayerMenu = ({ onBack }: MultiplayerMenuProps) => {
         }
     };
 
-    if (!isConnected) {
-        // Attempt to reconnect if we are disconnected (e.g. after sign out)
-        ensureSession();
+    useEffect(() => {
+        if (!isConnected) {
+            ensureSession();
+        }
+    }, [isConnected, ensureSession]);
 
+    if (!isConnected) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-white">
                 <p>Connecting to server...</p>

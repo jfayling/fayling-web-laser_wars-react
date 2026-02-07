@@ -59,7 +59,10 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const [matchDetails, setMatchDetails] = useState<Match | null>(null);
     const [incomingChallenges, setIncomingChallenges] = useState<Match[]>([]);
 
+    const [isMultiplayerEnabled, setIsMultiplayerEnabled] = useState(false);
+
     const ensureSession = async () => {
+        setIsMultiplayerEnabled(true);
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
             setUser(session.user);
@@ -77,7 +80,7 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
 
     useEffect(() => {
-        ensureSession();
+        if (!isMultiplayerEnabled) return;
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
@@ -88,7 +91,7 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         });
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [isMultiplayerEnabled]);
 
     // Presence Logic
     const [userStatus, setUserStatus] = useState<'online' | 'in-lobby' | 'in-game'>('online');
@@ -354,7 +357,7 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             .from('players')
             .select('nickname')
             .eq('id', userId)
-            .single();
+            .maybeSingle();
 
         if (data) {
             setNicknameState(data.nickname);
@@ -516,6 +519,7 @@ export const MultiplayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setUser(null);
         setNicknameState(null);
         setIsConnected(false);
+        setIsMultiplayerEnabled(false);
         // presence channel cleanup will be handled by effects since user becomes null
     };
 
